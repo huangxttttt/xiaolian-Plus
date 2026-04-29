@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.dromara.system.mapper.BizCustomerOrderMapper">
+
+    <resultMap type="org.dromara.system.domain.vo.BizCustomerOrderVo" id="BizCustomerOrderResult">
+        <id property="orderId" column="order_id"/>
+        <result property="deliveryDate" column="delivery_date"/>
+        <result property="routeName" column="route_name"/>
+        <result property="deliveryStatus" column="delivery_status"/>
+        <result property="customerName" column="customer_name"/>
+        <result property="customerPhone" column="customer_phone"/>
+    </resultMap>
+
+    <select id="selectByDeliveryId" resultMap="BizCustomerOrderResult">
+        select o.order_id, o.delivery_id, o.customer_id, c.name as customer_name, c.phone as customer_phone, o.total_amount, o.remark
+        from biz_customer_order o
+        left join biz_customer c on o.customer_id = c.customer_id
+        where o.delivery_id = #{deliveryId}
+        order by o.order_id
+    </select>
+
+    <select id="selectByCustomerId" resultMap="BizCustomerOrderResult">
+        select o.order_id,
+               o.delivery_id,
+               d.delivery_date,
+               r.route_name,
+               d.status as delivery_status,
+               o.customer_id,
+               c.name as customer_name,
+               c.phone as customer_phone,
+               o.total_amount,
+               o.remark
+        from biz_customer_order o
+        left join biz_delivery_order d on o.delivery_id = d.delivery_id
+        left join biz_route r on d.route_id = r.route_id
+        left join biz_customer c on o.customer_id = c.customer_id
+        where o.customer_id = #{customerId}
+        order by d.delivery_date desc, o.order_id desc
+    </select>
+</mapper>

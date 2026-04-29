@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.dromara.system.mapper.BizProductMapper">
+
+    <resultMap type="org.dromara.system.domain.vo.BizProductVo" id="BizProductResult">
+        <id property="productId" column="product_id"/>
+        <result property="categoryName" column="category_name"/>
+    </resultMap>
+
+    <sql id="selectProductVo">
+        select p.product_id, p.category_id, c.category_name, p.product_name, p.specification, p.supplier,
+               p.latest_sale_amount, p.latest_cost_price, p.create_time, p.remark
+        from (
+            select * from biz_product ${ew.getCustomSqlSegment}
+        ) p
+        left join biz_product_category c on p.category_id = c.category_id
+    </sql>
+
+    <select id="selectProductPage" resultMap="BizProductResult">
+        <include refid="selectProductVo"/>
+    </select>
+
+    <select id="selectProductList" resultMap="BizProductResult">
+        <include refid="selectProductVo"/>
+    </select>
+
+    <select id="selectProductById" resultMap="BizProductResult">
+        select p.product_id, p.category_id, c.category_name, p.product_name, p.specification, p.supplier,
+               p.latest_sale_amount, p.latest_cost_price, p.create_time, p.remark
+        from biz_product p
+        left join biz_product_category c on p.category_id = c.category_id
+        where p.product_id = #{productId}
+    </select>
+</mapper>

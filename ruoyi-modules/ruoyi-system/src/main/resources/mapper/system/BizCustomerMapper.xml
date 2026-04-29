@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.dromara.system.mapper.BizCustomerMapper">
+
+    <resultMap type="org.dromara.system.domain.vo.BizCustomerVo" id="BizCustomerResult">
+        <id property="customerId" column="customer_id"/>
+        <result property="routeName" column="route_name"/>
+    </resultMap>
+
+    <sql id="selectCustomerVo">
+        select c.customer_id, c.name, c.alias, c.phone, c.contact_name, c.route_id, r.route_name,
+               c.debt, c.address, c.map_location, c.common_products, c.photo, c.remark
+        from (
+            select * from biz_customer ${ew.getCustomSqlSegment}
+        ) c
+        left join biz_route r on c.route_id = r.route_id
+    </sql>
+
+    <select id="selectCustomerPage" resultMap="BizCustomerResult">
+        <include refid="selectCustomerVo"/>
+    </select>
+
+    <select id="selectCustomerList" resultMap="BizCustomerResult">
+        <include refid="selectCustomerVo"/>
+    </select>
+
+    <select id="selectCustomerById" resultMap="BizCustomerResult">
+        select c.customer_id, c.name, c.alias, c.phone, c.contact_name, c.route_id, r.route_name,
+               c.debt, c.address, c.map_location, c.common_products, c.photo, c.remark
+        from biz_customer c
+        left join biz_route r on c.route_id = r.route_id
+        where c.customer_id = #{customerId}
+    </select>
+</mapper>

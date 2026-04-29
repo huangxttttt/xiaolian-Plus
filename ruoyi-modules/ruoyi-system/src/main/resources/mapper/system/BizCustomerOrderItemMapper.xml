@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.dromara.system.mapper.BizCustomerOrderItemMapper">
+
+    <select id="selectByOrderIds" resultType="org.dromara.system.domain.vo.BizCustomerOrderItemVo">
+        select item_id, order_id, product_id, product_name, specification, supplier, quantity, sale_price, cost_price, amount, remark
+        from biz_customer_order_item
+        where order_id in
+        <foreach collection="orderIds" item="orderId" open="(" separator="," close=")">
+            #{orderId}
+        </foreach>
+        order by item_id
+    </select>
+</mapper>
