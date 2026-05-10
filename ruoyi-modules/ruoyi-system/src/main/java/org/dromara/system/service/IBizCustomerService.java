@@ -1,12 +1,15 @@
 package org.dromara.system.service;
 
 import org.dromara.system.domain.vo.BizCustomerVo;
+import org.dromara.system.domain.vo.BizCustomerOrderSummaryVo;
 import org.dromara.system.domain.vo.BizCustomerOrderVo;
 import org.dromara.system.domain.bo.BizCustomerBo;
 import org.dromara.system.domain.bo.BizCustomerQueryBo;
+import org.dromara.system.domain.bo.BizCustomerRepaymentBo;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.mybatis.core.page.PageQuery;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 
@@ -49,7 +52,24 @@ public interface IBizCustomerService {
      * @param customerId 客户ID
      * @return 客户订单记录
      */
-    List<BizCustomerOrderVo> queryCustomerOrders(Long customerId);
+    TableDataInfo<BizCustomerOrderVo> queryCustomerOrders(Long customerId, LocalDate beginDate, LocalDate endDate, PageQuery pageQuery);
+
+    /**
+     * 查询客户订单汇总
+     *
+     * @param customerId 客户ID
+     * @return 客户订单汇总
+     */
+    BizCustomerOrderSummaryVo queryCustomerOrderSummary(Long customerId, LocalDate beginDate, LocalDate endDate);
+
+    /**
+     * 客户订单还款
+     *
+     * @param orderId 客户订单ID
+     * @param bo 还款信息
+     * @return 是否还款成功
+     */
+    Boolean repayCustomerOrder(Long orderId, BizCustomerRepaymentBo bo);
 
     /**
      * 新增客户档案

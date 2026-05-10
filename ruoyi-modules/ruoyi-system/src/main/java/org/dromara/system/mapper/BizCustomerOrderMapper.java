@@ -1,9 +1,13 @@
 package org.dromara.system.mapper;
 
 import org.dromara.common.mybatis.core.mapper.BaseMapperPlus;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.apache.ibatis.annotations.Param;
 import org.dromara.system.domain.BizCustomerOrder;
+import org.dromara.system.domain.vo.BizCustomerOrderSummaryVo;
 import org.dromara.system.domain.vo.BizCustomerOrderVo;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -16,5 +20,12 @@ public interface BizCustomerOrderMapper extends BaseMapperPlus<BizCustomerOrder,
 
     List<BizCustomerOrderVo> selectByDeliveryId(Long deliveryId);
 
-    List<BizCustomerOrderVo> selectByCustomerId(Long customerId);
+    Page<BizCustomerOrderVo> selectPageByCustomerId(Page<BizCustomerOrderVo> page,
+                                                    @Param("customerId") Long customerId,
+                                                    @Param("beginDate") LocalDate beginDate,
+                                                    @Param("endDate") LocalDate endDate);
+
+    BizCustomerOrderSummaryVo selectSummaryByCustomerId(@Param("customerId") Long customerId,
+                                                        @Param("beginDate") LocalDate beginDate,
+                                                        @Param("endDate") LocalDate endDate);
 }

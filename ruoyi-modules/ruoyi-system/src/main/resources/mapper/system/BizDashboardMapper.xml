@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.dromara.system.mapper.BizDashboardMapper">
+
+    <select id="selectSalesAmount" resultType="java.math.BigDecimal">
+        select coalesce(sum(total_amount), 0)
+        from biz_delivery_order
+        where delivery_date &gt;= #{beginDate}
+          and delivery_date &lt; #{endDate}
+          and status = '已归档'
+    </select>
+
+    <select id="selectSalesAmountByStatus" resultType="java.math.BigDecimal">
+        select coalesce(sum(total_amount), 0)
+        from biz_delivery_order
+        where delivery_date &gt;= #{beginDate}
+          and delivery_date &lt; #{endDate}
+          and status = #{status}
+    </select>
+
+    <select id="selectCustomerOrderCount" resultType="java.lang.Long">
+        select count(*)
+        from biz_customer_order o
+        inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+        where d.delivery_date &gt;= #{beginDate}
+          and d.delivery_date &lt; #{endDate}
+          and d.status = '已归档'
+    </select>
+
+    <select id="selectDistinctCustomerCount" resultType="java.lang.Long">
+        select count(distinct o.customer_id)
+        from biz_customer_order o
+        inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+        where d.delivery_date &gt;= #{beginDate}
+          and d.delivery_date &lt; #{endDate}
+          and d.status = '已归档'
+    </select>
+
+    <select id="selectCustomerOrderCountAllStatus" resultType="java.lang.Long">
+        select count(*)
+        from biz_customer_order o
+        inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+        where d.delivery_date &gt;= #{beginDate}
+          and d.delivery_date &lt; #{endDate}
+    </select>
+
+    <select id="selectDistinctCustomerCountAllStatus" resultType="java.lang.Long">
+        select count(distinct o.customer_id)
+        from biz_customer_order o
+        inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+        where d.delivery_date &gt;= #{beginDate}
+          and d.delivery_date &lt; #{endDate}
+    </select>
+
+    <select id="selectDailySalesTrend" resultType="org.dromara.system.domain.vo.BizDashboardTrendPointVo">
+        select date_format(delivery_date, '%m-%d') as label,
+               coalesce(sum(total_amount), 0) as amount
+        from biz_delivery_order
+        where delivery_date &gt;= #{beginDate}
+          and delivery_date &lt; #{endDate}
+          and status = '已归档'
+        group by delivery_date
+        order by delivery_date
+    </select>
+
+    <select id="selectMonthlySalesTrend" resultType="org.dromara.system.domain.vo.BizDashboardTrendPointVo">
+        select date_format(delivery_date, '%Y-%m') as label,
+               coalesce(sum(total_amount), 0) as amount
+        from biz_delivery_order
+        where delivery_date &gt;= #{beginDate}
+          and delivery_date &lt; #{endDate}
+          and status = '已归档'
+        group by date_format(delivery_date, '%Y-%m')
+        order by date_format(delivery_date, '%Y-%m')
+    </select>
+
+    <select id="selectCustomerRanks" resultType="org.dromara.system.domain.vo.BizDashboardCustomerRankVo">
+        select c.name as customerName,
+               max(r.route_name) as routeName,
+               count(o.order_id) as orderCount,
+               coalesce(sum(o.total_amount), 0) as amount,
+               case
+                   when #{totalAmount} &gt; 0 then round(coalesce(sum(o.total_amount), 0) / #{totalAmount} * 100, 1)
+                   else 0
+               end as percent
+        from biz_customer_order o
+        inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+        left join biz_customer c on o.customer_id = c.customer_id
+        left join biz_route r on d.route_id = r.route_id
+        where d.delivery_date &gt;= #{beginDate}
+          and d.delivery_date &lt; #{endDate}
+          and d.status = '已归档'
+        group by o.customer_id, c.name
+        order by amount desc
+        limit 10
+    </select>
+
+    <select id="selectProductTotalQuantity" resultType="java.math.BigDecimal">
+        select coalesce(sum(i.quantity), 0)
+        from biz_customer_order_item i
+        inner join biz_customer_order o on i.order_id = o.order_id
+        inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+        where d.delivery_date &gt;= #{beginDate}
+          and d.delivery_date &lt; #{endDate}
+          and d.status = '已归档'
+    </select>
+
+    <select id="selectProductRanks" resultType="org.dromara.system.domain.vo.BizDashboardProductRankVo">
+        select i.product_name as productName,
+               i.specification as specification,
+               count(distinct o.order_id) as orderCount,
+               coalesce(sum(i.quantity), 0) as quantity,
+               coalesce(sum(i.amount), 0) as amount,
+               case
+                   when #{totalQuantity} &gt; 0 then round(coalesce(sum(i.quantity), 0) / #{totalQuantity} * 100, 1)
+                   else 0
+               end as percent
+        from biz_customer_order_item i
+        inner join biz_customer_order o on i.order_id = o.order_id
+        inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+        where d.delivery_date &gt;= #{beginDate}
+          and d.delivery_date &lt; #{endDate}
+          and d.status = '已归档'
+        group by i.product_id, i.product_name, i.specification
+        order by quantity desc, amount desc
+        limit 10
+    </select>
+
+    <select id="selectProfitMetric" resultType="org.dromara.system.domain.vo.BizDashboardProfitMetricVo">
+        select coalesce(sum(i.amount), 0) as salesAmount,
+               coalesce(sum(coalesce(i.cost_price, 0) * i.quantity), 0) as costAmount,
+               coalesce(sum(i.amount - coalesce(i.cost_price, 0) * i.quantity), 0) as profitAmount,
+               case
+                   when coalesce(sum(i.amount), 0) &gt; 0 then round(coalesce(sum(i.amount - coalesce(i.cost_price, 0) * i.quantity), 0) / coalesce(sum(i.amount), 0) * 100, 1)
+                   else 0
+               end as profitRate
+        from biz_customer_order_item i
+        inner join biz_customer_order o on i.order_id = o.order_id
+        inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+        where d.delivery_date &gt;= #{beginDate}
+          and d.delivery_date &lt; #{endDate}
+          and d.status = '已归档'
+    </select>
+
+    <select id="selectCustomerProfitRanks" resultType="org.dromara.system.domain.vo.BizDashboardProfitRankVo">
+        select c.name as name,
+               max(r.route_name) as subName,
+               count(distinct o.order_id) as orderCount,
+               coalesce(sum(i.quantity), 0) as quantity,
+               coalesce(sum(i.amount), 0) as salesAmount,
+               coalesce(sum(coalesce(i.cost_price, 0) * i.quantity), 0) as costAmount,
+               coalesce(sum(i.amount - coalesce(i.cost_price, 0) * i.quantity), 0) as profitAmount,
+               case
+                   when coalesce(sum(i.amount), 0) &gt; 0 then round(coalesce(sum(i.amount - coalesce(i.cost_price, 0) * i.quantity), 0) / coalesce(sum(i.amount), 0) * 100, 1)
+                   else 0
+               end as profitRate,
+               case
+                   when #{totalProfit} &gt; 0 then round(coalesce(sum(i.amount - coalesce(i.cost_price, 0) * i.quantity), 0) / #{totalProfit} * 100, 1)
+                   else 0
+               end as percent
+        from biz_customer_order_item i
+        inner join biz_customer_order o on i.order_id = o.order_id
+        inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+        left join biz_customer c on o.customer_id = c.customer_id
+        left join biz_route r on d.route_id = r.route_id
+        where d.delivery_date &gt;= #{beginDate}
+          and d.delivery_date &lt; #{endDate}
+          and d.status = '已归档'
+        group by o.customer_id, c.name
+        order by profitAmount desc, salesAmount desc
+        limit 10
+    </select>
+
+    <select id="selectProductProfitRanks" resultType="org.dromara.system.domain.vo.BizDashboardProfitRankVo">
+        select i.product_name as name,
+               i.specification as subName,
+               count(distinct o.order_id) as orderCount,
+               coalesce(sum(i.quantity), 0) as quantity,
+               coalesce(sum(i.amount), 0) as salesAmount,
+               coalesce(sum(coalesce(i.cost_price, 0) * i.quantity), 0) as costAmount,
+               coalesce(sum(i.amount - coalesce(i.cost_price, 0) * i.quantity), 0) as profitAmount,
+               case
+                   when coalesce(sum(i.amount), 0) &gt; 0 then round(coalesce(sum(i.amount - coalesce(i.cost_price, 0) * i.quantity), 0) / coalesce(sum(i.amount), 0) * 100, 1)
+                   else 0
+               end as profitRate,
+               case
+                   when #{totalProfit} &gt; 0 then round(coalesce(sum(i.amount - coalesce(i.cost_price, 0) * i.quantity), 0) / #{totalProfit} * 100, 1)
+                   else 0
+               end as percent
+        from biz_customer_order_item i
+        inner join biz_customer_order o on i.order_id = o.order_id
+        inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+        where d.delivery_date &gt;= #{beginDate}
+          and d.delivery_date &lt; #{endDate}
+          and d.status = '已归档'
+        group by i.product_id, i.product_name, i.specification
+        order by profitAmount desc, salesAmount desc
+        limit 10
+    </select>
+
+    <select id="selectRouteProfitRanks" resultType="org.dromara.system.domain.vo.BizDashboardProfitRankVo">
+        select r.route_name as name,
+               count(distinct o.order_id) as orderCount,
+               coalesce(sum(i.quantity), 0) as quantity,
+               coalesce(sum(i.amount), 0) as salesAmount,
+               coalesce(sum(coalesce(i.cost_price, 0) * i.quantity), 0) as costAmount,
+               coalesce(sum(i.amount - coalesce(i.cost_price, 0) * i.quantity), 0) as profitAmount,
+               case
+                   when coalesce(sum(i.amount), 0) &gt; 0 then round(coalesce(sum(i.amount - coalesce(i.cost_price, 0) * i.quantity), 0) / coalesce(sum(i.amount), 0) * 100, 1)
+                   else 0
+               end as profitRate,
+               case
+                   when #{totalProfit} &gt; 0 then round(coalesce(sum(i.amount - coalesce(i.cost_price, 0) * i.quantity), 0) / #{totalProfit} * 100, 1)
+                   else 0
+               end as percent
+        from biz_customer_order_item i
+        inner join biz_customer_order o on i.order_id = o.order_id
+        inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+        left join biz_route r on d.route_id = r.route_id
+        where d.delivery_date &gt;= #{beginDate}
+          and d.delivery_date &lt; #{endDate}
+          and d.status = '已归档'
+        group by d.route_id, r.route_name
+        order by profitAmount desc, salesAmount desc
+        limit 10
+    </select>
+</mapper>

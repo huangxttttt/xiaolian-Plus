@@ -38,6 +38,10 @@ public class BizCustomerOrderVo implements Serializable {
 
     private BigDecimal totalAmount;
 
+    private BigDecimal receivedAmount;
+
+    private BigDecimal unpaidAmount;
+
     private String remark;
 
     private List<BizCustomerOrderItemVo> items;

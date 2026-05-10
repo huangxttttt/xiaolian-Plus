@@ -1,11 +1,13 @@
 package org.dromara.system.controller;
 
 import java.util.List;
+import java.time.LocalDate;
 
 import lombok.RequiredArgsConstructor;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.*;
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.validation.annotation.Validated;
 import org.dromara.common.idempotent.annotation.RepeatSubmit;
@@ -18,9 +20,11 @@ import org.dromara.common.core.validate.EditGroup;
 import org.dromara.common.log.enums.BusinessType;
 import org.dromara.common.excel.utils.ExcelUtil;
 import org.dromara.system.domain.vo.BizCustomerVo;
+import org.dromara.system.domain.vo.BizCustomerOrderSummaryVo;
 import org.dromara.system.domain.vo.BizCustomerOrderVo;
 import org.dromara.system.domain.bo.BizCustomerBo;
 import org.dromara.system.domain.bo.BizCustomerQueryBo;
+import org.dromara.system.domain.bo.BizCustomerRepaymentBo;
 import org.dromara.system.service.IBizCustomerService;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 
@@ -77,9 +81,41 @@ public class BizCustomerController extends BaseController {
      */
     @SaCheckPermission("system:customer:query")
     @GetMapping("/{customerId}/orders")
-    public R<List<BizCustomerOrderVo>> getOrders(@NotNull(message = "主键不能为空")
-                                                 @PathVariable Long customerId) {
-        return R.ok(bizCustomerService.queryCustomerOrders(customerId));
+    public TableDataInfo<BizCustomerOrderVo> getOrders(@NotNull(message = "主键不能为空")
+                                                       @PathVariable Long customerId,
+                                                       @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate beginDate,
+                                                       @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
+                                                       PageQuery pageQuery) {
+        return bizCustomerService.queryCustomerOrders(customerId, beginDate, endDate, pageQuery);
+    }
+
+    /**
+     * 获取客户订单汇总
+     *
+     * @param customerId 客户ID
+     */
+    @SaCheckPermission("system:customer:query")
+    @GetMapping("/{customerId}/orders/summary")
+    public R<BizCustomerOrderSummaryVo> getOrderSummary(@NotNull(message = "主键不能为空")
+                                                        @PathVariable Long customerId,
+                                                        @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate beginDate,
+                                                        @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+        return R.ok(bizCustomerService.queryCustomerOrderSummary(customerId, beginDate, endDate));
+    }
+
+    /**
+     * 客户订单还款
+     *
+     * @param orderId 客户订单ID
+     */
+    @SaCheckPermission("system:customer:edit")
+    @Log(title = "客户订单还款", businessType = BusinessType.UPDATE)
+    @RepeatSubmit()
+    @PutMapping("/orders/{orderId}/repay")
+    public R<Void> repayOrder(@NotNull(message = "主键不能为空")
+                              @PathVariable Long orderId,
+                              @Validated @RequestBody BizCustomerRepaymentBo bo) {
+        return toAjax(bizCustomerService.repayCustomerOrder(orderId, bo));
     }
 
     /**

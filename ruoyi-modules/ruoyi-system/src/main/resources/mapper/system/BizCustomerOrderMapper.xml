@@ -11,17 +11,32 @@
         <result property="deliveryStatus" column="delivery_status"/>
         <result property="customerName" column="customer_name"/>
         <result property="customerPhone" column="customer_phone"/>
+        <result property="receivedAmount" column="received_amount"/>
+        <result property="unpaidAmount" column="unpaid_amount"/>
+    </resultMap>
+
+    <resultMap type="org.dromara.system.domain.vo.BizCustomerOrderSummaryVo" id="BizCustomerOrderSummaryResult">
+        <result property="orderCount" column="order_count"/>
+        <result property="totalAmount" column="total_amount"/>
     </resultMap>
 
     <select id="selectByDeliveryId" resultMap="BizCustomerOrderResult">
-        select o.order_id, o.delivery_id, o.customer_id, c.name as customer_name, c.phone as customer_phone, o.total_amount, o.remark
+        select o.order_id,
+               o.delivery_id,
+               o.customer_id,
+               c.name as customer_name,
+               c.phone as customer_phone,
+               o.total_amount,
+               o.received_amount,
+               o.unpaid_amount,
+               o.remark
         from biz_customer_order o
         left join biz_customer c on o.customer_id = c.customer_id
         where o.delivery_id = #{deliveryId}
         order by o.order_id
     </select>
 
-    <select id="selectByCustomerId" resultMap="BizCustomerOrderResult">
+    <select id="selectPageByCustomerId" resultMap="BizCustomerOrderResult">
         select o.order_id,
                o.delivery_id,
                d.delivery_date,
@@ -31,12 +46,34 @@
                c.name as customer_name,
                c.phone as customer_phone,
                o.total_amount,
+               o.received_amount,
+               o.unpaid_amount,
                o.remark
         from biz_customer_order o
         left join biz_delivery_order d on o.delivery_id = d.delivery_id
         left join biz_route r on d.route_id = r.route_id
         left join biz_customer c on o.customer_id = c.customer_id
         where o.customer_id = #{customerId}
+        <if test="beginDate != null">
+            and d.delivery_date &gt;= #{beginDate}
+        </if>
+        <if test="endDate != null">
+            and d.delivery_date &lt;= #{endDate}
+        </if>
         order by d.delivery_date desc, o.order_id desc
+    </select>
+
+    <select id="selectSummaryByCustomerId" resultMap="BizCustomerOrderSummaryResult">
+        select count(*) as order_count,
+               coalesce(sum(o.total_amount), 0) as total_amount
+        from biz_customer_order o
+        left join biz_delivery_order d on o.delivery_id = d.delivery_id
+        where o.customer_id = #{customerId}
+        <if test="beginDate != null">
+            and d.delivery_date &gt;= #{beginDate}
+        </if>
+        <if test="endDate != null">
+            and d.delivery_date &lt;= #{endDate}
+        </if>
     </select>
 </mapper>

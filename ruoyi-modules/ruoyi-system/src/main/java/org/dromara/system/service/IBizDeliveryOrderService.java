@@ -2,6 +2,7 @@ package org.dromara.system.service;
 
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
+import org.dromara.system.domain.bo.BizDeliveryArchiveBo;
 import org.dromara.system.domain.bo.BizDeliveryOrderBo;
 import org.dromara.system.domain.vo.BizDeliveryOrderVo;
 
@@ -25,6 +26,8 @@ public interface IBizDeliveryOrderService {
     Boolean insertByBo(BizDeliveryOrderBo bo);
 
     Boolean updateByBo(BizDeliveryOrderBo bo);
+
+    Boolean archiveById(Long deliveryId, BizDeliveryArchiveBo bo);
 
     Boolean deleteWithValidByIds(Collection<Long> ids, Boolean isValid);
 }

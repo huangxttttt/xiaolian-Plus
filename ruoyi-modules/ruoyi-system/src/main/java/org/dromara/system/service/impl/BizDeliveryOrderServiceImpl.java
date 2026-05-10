@@ -10,6 +10,7 @@ import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.system.domain.*;
+import org.dromara.system.domain.bo.BizDeliveryArchiveBo;
 import org.dromara.system.domain.bo.BizCustomerOrderBo;
 import org.dromara.system.domain.bo.BizCustomerOrderItemBo;
 import org.dromara.system.domain.bo.BizDeliveryOrderBo;
@@ -81,7 +82,7 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
     @Transactional(rollbackFor = Exception.class)
     public Boolean insertByBo(BizDeliveryOrderBo bo) {
         validHeader(bo);
-        BizDeliveryOrder delivery = buildDelivery(bo);
+        BizDeliveryOrder delivery = buildDelivery(bo, "未归档");
         baseMapper.insert(delivery);
         bo.setDeliveryId(delivery.getDeliveryId());
         BigDecimal totalAmount = saveCustomerOrders(delivery.getDeliveryId(), bo);
@@ -93,23 +94,27 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
     @Transactional(rollbackFor = Exception.class)
     public Boolean updateByBo(BizDeliveryOrderBo bo) {
         validHeader(bo);
-        if (baseMapper.selectById(bo.getDeliveryId()) == null) {
+        BizDeliveryOrder old = baseMapper.selectById(bo.getDeliveryId());
+        if (old == null) {
             throw new ServiceException("配送货单不存在");
+        }
+        if ("已归档".equals(old.getStatus())) {
+            throw new ServiceException("已归档的配送货单不能修改");
         }
         deleteChildren(List.of(bo.getDeliveryId()));
         BigDecimal totalAmount = saveCustomerOrders(bo.getDeliveryId(), bo);
-        BizDeliveryOrder delivery = buildDelivery(bo);
+        BizDeliveryOrder delivery = buildDelivery(bo, StringUtils.blankToDefault(old.getStatus(), "未归档"));
         delivery.setDeliveryId(bo.getDeliveryId());
         delivery.setTotalAmount(totalAmount);
         return baseMapper.updateById(delivery) > 0;
     }
 
-    private BizDeliveryOrder buildDelivery(BizDeliveryOrderBo bo) {
+    private BizDeliveryOrder buildDelivery(BizDeliveryOrderBo bo, String status) {
         BizDeliveryOrder delivery = new BizDeliveryOrder();
         delivery.setDeliveryId(bo.getDeliveryId());
         delivery.setDeliveryDate(bo.getDeliveryDate());
         delivery.setRouteId(bo.getRouteId());
-        delivery.setStatus(StringUtils.blankToDefault(bo.getStatus(), "未归档"));
+        delivery.setStatus(status);
         delivery.setRemark(bo.getRemark());
         delivery.setTotalAmount(BigDecimal.ZERO);
         return delivery;
@@ -141,6 +146,8 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
             customerOrder.setCustomerId(customerOrderBo.getCustomerId());
             customerOrder.setRemark(customerOrderBo.getRemark());
             customerOrder.setTotalAmount(BigDecimal.ZERO);
+            customerOrder.setReceivedAmount(BigDecimal.ZERO);
+            customerOrder.setUnpaidAmount(BigDecimal.ZERO);
             customerOrderMapper.insert(customerOrder);
 
             BigDecimal orderTotal = BigDecimal.ZERO;
@@ -198,6 +205,73 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
         priceRecordMapper.updateById(record);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean archiveById(Long deliveryId, BizDeliveryArchiveBo bo) {
+        BizDeliveryOrder delivery = baseMapper.selectById(deliveryId);
+        if (delivery == null) {
+            throw new ServiceException("配送货单不存在");
+        }
+        if ("已归档".equals(delivery.getStatus())) {
+            throw new ServiceException("配送货单已归档");
+        }
+
+        List<BizCustomerOrder> orders = customerOrderMapper.selectList(Wrappers.lambdaQuery(BizCustomerOrder.class)
+            .eq(BizCustomerOrder::getDeliveryId, deliveryId));
+        if (orders.isEmpty()) {
+            throw new ServiceException("配送货单没有客户订单，不能归档");
+        }
+
+        Map<Long, BigDecimal> receiptMap = new HashMap<>();
+        for (BizDeliveryArchiveBo.CustomerReceipt receipt : bo.getReceipts()) {
+            BigDecimal old = receiptMap.put(receipt.getOrderId(), receipt.getReceivedAmount());
+            if (old != null) {
+                throw new ServiceException("客户订单收款信息重复");
+            }
+        }
+
+        Set<Long> orderIds = orders.stream().map(BizCustomerOrder::getOrderId).collect(Collectors.toSet());
+        if (!orderIds.equals(receiptMap.keySet())) {
+            throw new ServiceException("客户收款信息与配送货单不匹配");
+        }
+
+        for (BizCustomerOrder order : orders) {
+            BigDecimal orderAmount = order.getTotalAmount() == null ? BigDecimal.ZERO : order.getTotalAmount();
+            BigDecimal receivedAmount = receiptMap.get(order.getOrderId());
+            if (receivedAmount == null || receivedAmount.compareTo(BigDecimal.ZERO) < 0) {
+                throw new ServiceException("实收金额不能小于0");
+            }
+            if (receivedAmount.compareTo(orderAmount) > 0) {
+                throw new ServiceException("实收金额不能大于订单金额");
+            }
+        }
+
+        boolean archived = baseMapper.update(null, Wrappers.lambdaUpdate(BizDeliveryOrder.class)
+            .eq(BizDeliveryOrder::getDeliveryId, deliveryId)
+            .eq(BizDeliveryOrder::getStatus, "未归档")
+            .set(BizDeliveryOrder::getStatus, "已归档")) > 0;
+        if (!archived) {
+            throw new ServiceException("配送货单状态已变化，请刷新后重试");
+        }
+
+        for (BizCustomerOrder order : orders) {
+            BizCustomer customer = customerMapper.selectById(order.getCustomerId());
+            if (customer == null) {
+                throw new ServiceException("客户不存在");
+            }
+            BigDecimal currentDebt = customer.getDebt() == null ? BigDecimal.ZERO : customer.getDebt();
+            BigDecimal orderAmount = order.getTotalAmount() == null ? BigDecimal.ZERO : order.getTotalAmount();
+            BigDecimal receivedAmount = receiptMap.get(order.getOrderId());
+            BigDecimal unpaidAmount = orderAmount.subtract(receivedAmount);
+            order.setReceivedAmount(receivedAmount);
+            order.setUnpaidAmount(unpaidAmount);
+            customerOrderMapper.updateById(order);
+            customer.setDebt(currentDebt.add(unpaidAmount));
+            customerMapper.updateById(customer);
+        }
+        return true;
+    }
+
     private void fillChildren(BizDeliveryOrderVo vo) {
         List<BizCustomerOrderVo> customerOrders = customerOrderMapper.selectByDeliveryId(vo.getDeliveryId());
         if (customerOrders.isEmpty()) {
@@ -214,6 +288,12 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean deleteWithValidByIds(Collection<Long> ids, Boolean isValid) {
+        long archivedCount = baseMapper.selectCount(Wrappers.lambdaQuery(BizDeliveryOrder.class)
+            .in(BizDeliveryOrder::getDeliveryId, ids)
+            .eq(BizDeliveryOrder::getStatus, "已归档"));
+        if (archivedCount > 0) {
+            throw new ServiceException("已归档的配送货单不能删除");
+        }
         deleteChildren(ids);
         return baseMapper.deleteByIds(ids) > 0;
     }

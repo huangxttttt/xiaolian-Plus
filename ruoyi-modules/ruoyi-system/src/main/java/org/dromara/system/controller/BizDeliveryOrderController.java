@@ -15,6 +15,7 @@ import org.dromara.common.log.enums.BusinessType;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.web.core.BaseController;
+import org.dromara.system.domain.bo.BizDeliveryArchiveBo;
 import org.dromara.system.domain.bo.BizDeliveryOrderBo;
 import org.dromara.system.domain.vo.BizDeliveryOrderVo;
 import org.dromara.system.service.IBizDeliveryOrderService;
@@ -72,6 +73,16 @@ public class BizDeliveryOrderController extends BaseController {
     @PutMapping()
     public R<Void> edit(@Validated(EditGroup.class) @RequestBody BizDeliveryOrderBo bo) {
         return toAjax(bizDeliveryOrderService.updateByBo(bo));
+    }
+
+    @SaCheckPermission("system:deliveryOrder:edit")
+    @Log(title = "配送货单归档", businessType = BusinessType.UPDATE)
+    @RepeatSubmit()
+    @PutMapping("/{deliveryId}/archive")
+    public R<Void> archive(@NotNull(message = "主键不能为空")
+                           @PathVariable Long deliveryId,
+                           @Validated @RequestBody BizDeliveryArchiveBo bo) {
+        return toAjax(bizDeliveryOrderService.archiveById(deliveryId, bo));
     }
 
     @SaCheckPermission("system:deliveryOrder:remove")

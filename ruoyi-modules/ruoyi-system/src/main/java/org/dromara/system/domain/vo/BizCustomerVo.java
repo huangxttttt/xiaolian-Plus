@@ -10,6 +10,7 @@ import lombok.Data;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.Date;
 
 
@@ -73,7 +74,7 @@ public class BizCustomerVo implements Serializable {
      * 欠款金额
      */
     @ExcelProperty(value = "欠款金额")
-    private Long debt;
+    private BigDecimal debt;
 
     /**
      * 客户位置

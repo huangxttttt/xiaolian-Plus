@@ -13,16 +13,22 @@ import org.dromara.common.core.exception.ServiceException;
 import org.springframework.stereotype.Service;
 import org.dromara.system.domain.bo.BizCustomerBo;
 import org.dromara.system.domain.bo.BizCustomerQueryBo;
+import org.dromara.system.domain.bo.BizCustomerRepaymentBo;
 import org.dromara.system.domain.vo.BizCustomerVo;
 import org.dromara.system.domain.vo.BizCustomerOrderItemVo;
+import org.dromara.system.domain.vo.BizCustomerOrderSummaryVo;
 import org.dromara.system.domain.vo.BizCustomerOrderVo;
 import org.dromara.system.domain.BizCustomer;
+import org.dromara.system.domain.BizCustomerOrder;
 import org.dromara.system.mapper.BizCustomerOrderItemMapper;
 import org.dromara.system.mapper.BizCustomerOrderMapper;
 import org.dromara.system.mapper.BizCustomerMapper;
 import org.dromara.system.mapper.BizRouteMapper;
 import org.dromara.system.service.IBizCustomerService;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Collection;
 import java.util.Map;
@@ -82,19 +88,63 @@ public class BizCustomerServiceImpl implements IBizCustomerService {
     }
 
     @Override
-    public List<BizCustomerOrderVo> queryCustomerOrders(Long customerId) {
+    public TableDataInfo<BizCustomerOrderVo> queryCustomerOrders(Long customerId, LocalDate beginDate, LocalDate endDate, PageQuery pageQuery) {
         if (baseMapper.selectById(customerId) == null) {
             throw new ServiceException("客户不存在");
         }
-        List<BizCustomerOrderVo> orders = customerOrderMapper.selectByCustomerId(customerId);
+        Page<BizCustomerOrderVo> result = customerOrderMapper.selectPageByCustomerId(pageQuery.build(), customerId, beginDate, endDate);
+        List<BizCustomerOrderVo> orders = result.getRecords();
         if (orders.isEmpty()) {
-            return orders;
+            return TableDataInfo.build(result);
         }
         List<Long> orderIds = orders.stream().map(BizCustomerOrderVo::getOrderId).toList();
         Map<Long, List<BizCustomerOrderItemVo>> itemMap = itemMapper.selectByOrderIds(orderIds).stream()
             .collect(Collectors.groupingBy(BizCustomerOrderItemVo::getOrderId));
         orders.forEach(order -> order.setItems(itemMap.getOrDefault(order.getOrderId(), List.of())));
-        return orders;
+        return TableDataInfo.build(result);
+    }
+
+    @Override
+    public BizCustomerOrderSummaryVo queryCustomerOrderSummary(Long customerId, LocalDate beginDate, LocalDate endDate) {
+        if (baseMapper.selectById(customerId) == null) {
+            throw new ServiceException("客户不存在");
+        }
+        return customerOrderMapper.selectSummaryByCustomerId(customerId, beginDate, endDate);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean repayCustomerOrder(Long orderId, BizCustomerRepaymentBo bo) {
+        BizCustomerOrder order = customerOrderMapper.selectById(orderId);
+        if (order == null) {
+            throw new ServiceException("客户订单不存在");
+        }
+        BigDecimal repaymentAmount = bo.getAmount();
+        if (repaymentAmount == null || repaymentAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ServiceException("还款金额必须大于0");
+        }
+        BigDecimal unpaidAmount = order.getUnpaidAmount() == null ? BigDecimal.ZERO : order.getUnpaidAmount();
+        if (unpaidAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ServiceException("该订单没有欠款");
+        }
+        if (repaymentAmount.compareTo(unpaidAmount) > 0) {
+            throw new ServiceException("还款金额不能大于该单欠款金额");
+        }
+
+        BizCustomer customer = baseMapper.selectById(order.getCustomerId());
+        if (customer == null) {
+            throw new ServiceException("客户不存在");
+        }
+
+        BigDecimal receivedAmount = order.getReceivedAmount() == null ? BigDecimal.ZERO : order.getReceivedAmount();
+        order.setReceivedAmount(receivedAmount.add(repaymentAmount));
+        order.setUnpaidAmount(unpaidAmount.subtract(repaymentAmount));
+        customerOrderMapper.updateById(order);
+
+        BigDecimal customerDebt = customer.getDebt() == null ? BigDecimal.ZERO : customer.getDebt();
+        BigDecimal newDebt = customerDebt.subtract(repaymentAmount);
+        customer.setDebt(newDebt.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : newDebt);
+        return baseMapper.updateById(customer) > 0;
     }
 
     private LambdaQueryWrapper<BizCustomer> buildQueryWrapper(BizCustomerQueryBo bo) {

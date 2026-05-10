@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.io.Serial;
+import java.math.BigDecimal;
 
 /**
  * 客户档案对象 biz_customer
@@ -55,7 +56,7 @@ public class BizCustomer extends BaseEntity {
     /**
      * 欠款金额
      */
-    private Long debt;
+    private BigDecimal debt;
 
     /**
      * 客户位置
