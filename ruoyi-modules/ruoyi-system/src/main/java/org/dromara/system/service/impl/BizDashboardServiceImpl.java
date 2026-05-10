@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeParseException;
 
 /**
  * 首页统计Service业务层处理
@@ -24,7 +26,7 @@ public class BizDashboardServiceImpl implements IBizDashboardService {
     private final BizDashboardMapper dashboardMapper;
 
     @Override
-    public BizDashboardSummaryVo querySummary(String rankPeriod) {
+    public BizDashboardSummaryVo querySummary(String rankPeriod, String rankMonth) {
         LocalDate today = LocalDate.now();
         LocalDate tomorrow = today.plusDays(1);
         LocalDate yesterday = today.minusDays(1);
@@ -45,8 +47,11 @@ public class BizDashboardServiceImpl implements IBizDashboardService {
         summary.setMonthProfit(defaultProfitMetric(dashboardMapper.selectProfitMetric(monthStart, nextMonthStart)));
         summary.setYearProfit(defaultProfitMetric(dashboardMapper.selectProfitMetric(yearStart, nextYearStart)));
 
-        LocalDate rankBeginDate = "year".equals(rankPeriod) ? yearStart : monthStart;
-        LocalDate rankEndDate = "year".equals(rankPeriod) ? nextYearStart : nextMonthStart;
+        YearMonth selectedRankMonth = parseRankMonth(rankMonth, YearMonth.from(today));
+        LocalDate rankMonthStart = selectedRankMonth.atDay(1);
+        LocalDate rankNextMonthStart = selectedRankMonth.plusMonths(1).atDay(1);
+        LocalDate rankBeginDate = "year".equals(rankPeriod) ? yearStart : rankMonthStart;
+        LocalDate rankEndDate = "year".equals(rankPeriod) ? nextYearStart : rankNextMonthStart;
         BigDecimal rankAmount = defaultDecimal(dashboardMapper.selectSalesAmount(rankBeginDate, rankEndDate));
         BigDecimal totalQuantity = defaultDecimal(dashboardMapper.selectProductTotalQuantity(rankBeginDate, rankEndDate));
         BigDecimal totalProfit = defaultDecimal(defaultProfitMetric(dashboardMapper.selectProfitMetric(rankBeginDate, rankEndDate)).getProfitAmount());
@@ -56,6 +61,17 @@ public class BizDashboardServiceImpl implements IBizDashboardService {
         summary.setProductProfitRanks(dashboardMapper.selectProductProfitRanks(rankBeginDate, rankEndDate, totalProfit));
         summary.setRouteProfitRanks(dashboardMapper.selectRouteProfitRanks(rankBeginDate, rankEndDate, totalProfit));
         return summary;
+    }
+
+    private YearMonth parseRankMonth(String rankMonth, YearMonth defaultMonth) {
+        if (rankMonth == null || rankMonth.isBlank()) {
+            return defaultMonth;
+        }
+        try {
+            return YearMonth.parse(rankMonth);
+        } catch (DateTimeParseException e) {
+            return defaultMonth;
+        }
     }
 
     private BizDashboardMetricVo buildMetric(LocalDate beginDate, LocalDate endDate, LocalDate previousBeginDate,

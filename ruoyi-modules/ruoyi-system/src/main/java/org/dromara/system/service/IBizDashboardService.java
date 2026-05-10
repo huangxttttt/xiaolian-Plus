@@ -10,5 +10,5 @@ import org.dromara.system.domain.vo.BizDashboardSummaryVo;
  */
 public interface IBizDashboardService {
 
-    BizDashboardSummaryVo querySummary(String rankPeriod);
+    BizDashboardSummaryVo querySummary(String rankPeriod, String rankMonth);
 }

@@ -25,7 +25,8 @@ public class BizDashboardController {
     private final IBizDashboardService dashboardService;
 
     @GetMapping("/summary")
-    public R<BizDashboardSummaryVo> summary(@RequestParam(defaultValue = "month") String rankPeriod) {
-        return R.ok(dashboardService.querySummary(rankPeriod));
+    public R<BizDashboardSummaryVo> summary(@RequestParam(defaultValue = "month") String rankPeriod,
+                                            @RequestParam(required = false) String rankMonth) {
+        return R.ok(dashboardService.querySummary(rankPeriod, rankMonth));
     }
 }
