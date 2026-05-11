@@ -4,6 +4,7 @@ import org.apache.ibatis.annotations.Param;
 import org.dromara.common.mybatis.core.mapper.BaseMapperPlus;
 import org.dromara.system.domain.BizCustomerOrderItem;
 import org.dromara.system.domain.vo.BizCustomerOrderItemVo;
+import org.dromara.system.domain.vo.BizCustomerTopProductVo;
 
 import java.util.Collection;
 import java.util.List;
@@ -17,4 +18,7 @@ import java.util.List;
 public interface BizCustomerOrderItemMapper extends BaseMapperPlus<BizCustomerOrderItem, BizCustomerOrderItemVo> {
 
     List<BizCustomerOrderItemVo> selectByOrderIds(@Param("orderIds") Collection<Long> orderIds);
+
+    List<BizCustomerTopProductVo> selectTopProductsByCustomerId(@Param("customerId") Long customerId,
+                                                                @Param("limit") int limit);
 }

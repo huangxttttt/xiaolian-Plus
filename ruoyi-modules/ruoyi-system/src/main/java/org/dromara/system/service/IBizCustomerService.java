@@ -3,6 +3,7 @@ package org.dromara.system.service;
 import org.dromara.system.domain.vo.BizCustomerVo;
 import org.dromara.system.domain.vo.BizCustomerOrderSummaryVo;
 import org.dromara.system.domain.vo.BizCustomerOrderVo;
+import org.dromara.system.domain.vo.BizCustomerTopProductVo;
 import org.dromara.system.domain.bo.BizCustomerBo;
 import org.dromara.system.domain.bo.BizCustomerQueryBo;
 import org.dromara.system.domain.bo.BizCustomerRepaymentBo;
@@ -61,6 +62,14 @@ public interface IBizCustomerService {
      * @return 客户订单汇总
      */
     BizCustomerOrderSummaryVo queryCustomerOrderSummary(Long customerId, LocalDate beginDate, LocalDate endDate);
+
+    /**
+     * 查询客户常购商品排行
+     *
+     * @param customerId 客户ID
+     * @return 客户常购商品排行
+     */
+    List<BizCustomerTopProductVo> queryCustomerTopProducts(Long customerId);
 
     /**
      * 客户订单还款

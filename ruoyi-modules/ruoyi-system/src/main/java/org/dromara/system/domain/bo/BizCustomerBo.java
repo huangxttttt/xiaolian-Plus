@@ -62,19 +62,29 @@ public class BizCustomerBo extends BaseEntity {
     private BigDecimal debt;
 
     /**
-     * 客户位置
-     */
-    private String address;
-
-    /**
      * 地图定位
      */
     private String mapLocation;
 
     /**
-     * 常用商品
+     * 地图经度
      */
-    private String commonProducts;
+    private BigDecimal longitude;
+
+    /**
+     * 地图纬度
+     */
+    private BigDecimal latitude;
+
+    /**
+     * 地图解析地址
+     */
+    private String mapAddress;
+
+    /**
+     * 地图服务商
+     */
+    private String mapProvider;
 
     /**
      * 门面照片

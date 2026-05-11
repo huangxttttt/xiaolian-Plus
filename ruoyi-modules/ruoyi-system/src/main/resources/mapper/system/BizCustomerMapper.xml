@@ -11,7 +11,7 @@
 
     <sql id="selectCustomerVo">
         select c.customer_id, c.name, c.alias, c.phone, c.contact_name, c.route_id, r.route_name,
-               c.debt, c.address, c.map_location, c.common_products, c.photo, c.remark
+               c.debt, c.map_location, c.longitude, c.latitude, c.map_address, c.map_provider, c.photo, c.remark
         from (
             select * from biz_customer ${ew.getCustomSqlSegment}
         ) c
@@ -28,7 +28,7 @@
 
     <select id="selectCustomerById" resultMap="BizCustomerResult">
         select c.customer_id, c.name, c.alias, c.phone, c.contact_name, c.route_id, r.route_name,
-               c.debt, c.address, c.map_location, c.common_products, c.photo, c.remark
+               c.debt, c.map_location, c.longitude, c.latitude, c.map_address, c.map_provider, c.photo, c.remark
         from biz_customer c
         left join biz_route r on c.route_id = r.route_id
         where c.customer_id = #{customerId}

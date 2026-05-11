@@ -13,4 +13,20 @@
         </foreach>
         order by item_id
     </select>
+
+    <select id="selectTopProductsByCustomerId" resultType="org.dromara.system.domain.vo.BizCustomerTopProductVo">
+        select i.product_id,
+               i.product_name,
+               i.specification,
+               i.supplier,
+               coalesce(sum(i.quantity), 0) as total_quantity,
+               coalesce(sum(i.amount), 0) as total_amount,
+               count(distinct i.order_id) as order_count
+        from biz_customer_order_item i
+        inner join biz_customer_order o on i.order_id = o.order_id
+        where o.customer_id = #{customerId}
+        group by i.product_id, i.product_name, i.specification, i.supplier
+        order by total_quantity desc, total_amount desc
+        limit #{limit}
+    </select>
 </mapper>

@@ -22,6 +22,7 @@ import org.dromara.common.excel.utils.ExcelUtil;
 import org.dromara.system.domain.vo.BizCustomerVo;
 import org.dromara.system.domain.vo.BizCustomerOrderSummaryVo;
 import org.dromara.system.domain.vo.BizCustomerOrderVo;
+import org.dromara.system.domain.vo.BizCustomerTopProductVo;
 import org.dromara.system.domain.bo.BizCustomerBo;
 import org.dromara.system.domain.bo.BizCustomerQueryBo;
 import org.dromara.system.domain.bo.BizCustomerRepaymentBo;
@@ -101,6 +102,18 @@ public class BizCustomerController extends BaseController {
                                                         @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate beginDate,
                                                         @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         return R.ok(bizCustomerService.queryCustomerOrderSummary(customerId, beginDate, endDate));
+    }
+
+    /**
+     * 获取客户常购商品排行
+     *
+     * @param customerId 客户ID
+     */
+    @SaCheckPermission("system:customer:query")
+    @GetMapping("/{customerId}/top-products")
+    public R<List<BizCustomerTopProductVo>> getTopProducts(@NotNull(message = "主键不能为空")
+                                                           @PathVariable Long customerId) {
+        return R.ok(bizCustomerService.queryCustomerTopProducts(customerId));
     }
 
     /**
