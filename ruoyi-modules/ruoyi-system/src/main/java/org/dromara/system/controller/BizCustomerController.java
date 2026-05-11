@@ -23,6 +23,7 @@ import org.dromara.system.domain.vo.BizCustomerVo;
 import org.dromara.system.domain.vo.BizCustomerOrderSummaryVo;
 import org.dromara.system.domain.vo.BizCustomerOrderVo;
 import org.dromara.system.domain.vo.BizCustomerTopProductVo;
+import org.dromara.system.domain.vo.BizRouteCustomerOrderStatsVo;
 import org.dromara.system.domain.bo.BizCustomerBo;
 import org.dromara.system.domain.bo.BizCustomerQueryBo;
 import org.dromara.system.domain.bo.BizCustomerRepaymentBo;
@@ -114,6 +115,18 @@ public class BizCustomerController extends BaseController {
     public R<List<BizCustomerTopProductVo>> getTopProducts(@NotNull(message = "主键不能为空")
                                                            @PathVariable Long customerId) {
         return R.ok(bizCustomerService.queryCustomerTopProducts(customerId));
+    }
+
+    /**
+     * 获取配送地客户订单占比
+     *
+     * @param routeId 配送地ID
+     */
+    @SaCheckPermission("system:customer:query")
+    @GetMapping("/route/{routeId}/order-stats")
+    public R<List<BizRouteCustomerOrderStatsVo>> getRouteOrderStats(@NotNull(message = "主键不能为空")
+                                                                    @PathVariable Long routeId) {
+        return R.ok(bizCustomerService.queryRouteCustomerOrderStats(routeId));
     }
 
     /**

@@ -19,6 +19,7 @@ import org.dromara.system.domain.vo.BizCustomerOrderItemVo;
 import org.dromara.system.domain.vo.BizCustomerOrderSummaryVo;
 import org.dromara.system.domain.vo.BizCustomerOrderVo;
 import org.dromara.system.domain.vo.BizCustomerTopProductVo;
+import org.dromara.system.domain.vo.BizRouteCustomerOrderStatsVo;
 import org.dromara.system.domain.BizCustomer;
 import org.dromara.system.domain.BizCustomerOrder;
 import org.dromara.system.mapper.BizCustomerOrderItemMapper;
@@ -119,6 +120,14 @@ public class BizCustomerServiceImpl implements IBizCustomerService {
             throw new ServiceException("客户不存在");
         }
         return itemMapper.selectTopProductsByCustomerId(customerId, 5);
+    }
+
+    @Override
+    public List<BizRouteCustomerOrderStatsVo> queryRouteCustomerOrderStats(Long routeId) {
+        if (routeMapper.selectById(routeId) == null) {
+            throw new ServiceException("配送线路不存在");
+        }
+        return baseMapper.selectRouteCustomerOrderStats(routeId);
     }
 
     @Override

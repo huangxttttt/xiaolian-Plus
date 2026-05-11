@@ -9,6 +9,14 @@
         <result property="routeName" column="route_name"/>
     </resultMap>
 
+    <resultMap type="org.dromara.system.domain.vo.BizRouteCustomerOrderStatsVo" id="RouteCustomerOrderStatsResult">
+        <id property="customerId" column="customer_id"/>
+        <result property="customerName" column="customer_name"/>
+        <result property="orderCount" column="order_count"/>
+        <result property="routeOrderCount" column="route_order_count"/>
+        <result property="percentage" column="percentage"/>
+    </resultMap>
+
     <sql id="selectCustomerVo">
         select c.customer_id, c.name, c.alias, c.phone, c.contact_name, c.route_id, r.route_name,
                c.debt, c.map_location, c.longitude, c.latitude, c.map_address, c.map_provider, c.photo, c.remark
@@ -32,5 +40,32 @@
         from biz_customer c
         left join biz_route r on c.route_id = r.route_id
         where c.customer_id = #{customerId}
+    </select>
+
+    <select id="selectRouteCustomerOrderStats" resultMap="RouteCustomerOrderStatsResult">
+        select c.customer_id,
+               c.name as customer_name,
+               coalesce(s.order_count, 0) as order_count,
+               coalesce(t.route_order_count, 0) as route_order_count,
+               case
+                   when coalesce(t.route_order_count, 0) = 0 then 0
+                   else round(coalesce(s.order_count, 0) * 100 / t.route_order_count, 2)
+               end as percentage
+        from biz_customer c
+        left join (
+            select o.customer_id, count(*) as order_count
+            from biz_customer_order o
+            inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+            where d.route_id = #{routeId}
+            group by o.customer_id
+        ) s on c.customer_id = s.customer_id
+        left join (
+            select count(*) as route_order_count
+            from biz_customer_order o
+            inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+            where d.route_id = #{routeId}
+        ) t on 1 = 1
+        where c.route_id = #{routeId}
+        order by c.customer_id
     </select>
 </mapper>

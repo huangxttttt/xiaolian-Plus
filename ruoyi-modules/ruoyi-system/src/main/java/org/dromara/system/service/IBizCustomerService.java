@@ -4,6 +4,7 @@ import org.dromara.system.domain.vo.BizCustomerVo;
 import org.dromara.system.domain.vo.BizCustomerOrderSummaryVo;
 import org.dromara.system.domain.vo.BizCustomerOrderVo;
 import org.dromara.system.domain.vo.BizCustomerTopProductVo;
+import org.dromara.system.domain.vo.BizRouteCustomerOrderStatsVo;
 import org.dromara.system.domain.bo.BizCustomerBo;
 import org.dromara.system.domain.bo.BizCustomerQueryBo;
 import org.dromara.system.domain.bo.BizCustomerRepaymentBo;
@@ -70,6 +71,14 @@ public interface IBizCustomerService {
      * @return 客户常购商品排行
      */
     List<BizCustomerTopProductVo> queryCustomerTopProducts(Long customerId);
+
+    /**
+     * 查询配送地客户订单占比
+     *
+     * @param routeId 配送地ID
+     * @return 客户订单占比列表
+     */
+    List<BizRouteCustomerOrderStatsVo> queryRouteCustomerOrderStats(Long routeId);
 
     /**
      * 客户订单还款

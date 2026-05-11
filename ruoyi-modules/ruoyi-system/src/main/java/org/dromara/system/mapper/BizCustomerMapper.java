@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.dromara.system.domain.BizCustomer;
+import org.dromara.system.domain.vo.BizRouteCustomerOrderStatsVo;
 import org.dromara.system.domain.vo.BizCustomerVo;
 import org.dromara.common.mybatis.core.mapper.BaseMapperPlus;
 import org.apache.ibatis.annotations.Param;
@@ -42,4 +43,12 @@ public interface BizCustomerMapper extends BaseMapperPlus<BizCustomer, BizCustom
      * @return 客户档案
      */
     BizCustomerVo selectCustomerById(Long customerId);
+
+    /**
+     * 查询配送地客户订单占比
+     *
+     * @param routeId 配送地ID
+     * @return 客户订单占比列表
+     */
+    List<BizRouteCustomerOrderStatsVo> selectRouteCustomerOrderStats(Long routeId);
 }
