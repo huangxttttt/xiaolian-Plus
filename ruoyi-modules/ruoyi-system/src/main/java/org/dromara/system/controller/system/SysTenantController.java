@@ -80,6 +80,14 @@ public class SysTenantController extends BaseController {
     }
 
     /**
+     * 查询当前租户
+     */
+    @GetMapping("/current")
+    public R<SysTenantVo> current() {
+        return R.ok(TenantHelper.ignore(() -> tenantService.queryByTenantId(TenantHelper.getTenantId())));
+    }
+
+    /**
      * 新增租户
      */
     @ApiEncrypt
