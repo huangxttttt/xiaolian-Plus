@@ -221,6 +221,16 @@ public class BizCustomerServiceImpl implements IBizCustomerService {
         if (entity.getRouteId() != null && routeMapper.selectById(entity.getRouteId()) == null) {
             throw new ServiceException("配送线路不存在");
         }
+        if (StringUtils.isNotBlank(entity.getName())) {
+            LambdaQueryWrapper<BizCustomer> lqw = Wrappers.lambdaQuery();
+            lqw.eq(BizCustomer::getName, entity.getName());
+            lqw.eq(entity.getRouteId() != null, BizCustomer::getRouteId, entity.getRouteId());
+            lqw.isNull(entity.getRouteId() == null, BizCustomer::getRouteId);
+            lqw.ne(entity.getCustomerId() != null, BizCustomer::getCustomerId, entity.getCustomerId());
+            if (baseMapper.selectCount(lqw) > 0) {
+                throw new ServiceException("同一配送线路下客户名称已存在");
+            }
+        }
     }
 
     /**
