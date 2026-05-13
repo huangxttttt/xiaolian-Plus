@@ -34,6 +34,8 @@ public class BizCustomerOrderVo implements Serializable {
 
     private String customerName;
 
+    private String customerAlias;
+
     private String customerPhone;
 
     private BigDecimal totalAmount;

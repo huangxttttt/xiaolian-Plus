@@ -10,6 +10,7 @@
         <result property="routeName" column="route_name"/>
         <result property="deliveryStatus" column="delivery_status"/>
         <result property="customerName" column="customer_name"/>
+        <result property="customerAlias" column="customer_alias"/>
         <result property="customerPhone" column="customer_phone"/>
         <result property="receivedAmount" column="received_amount"/>
         <result property="unpaidAmount" column="unpaid_amount"/>
@@ -24,7 +25,9 @@
         select o.order_id,
                o.delivery_id,
                o.customer_id,
+               r.route_name,
                c.name as customer_name,
+               c.alias as customer_alias,
                c.phone as customer_phone,
                o.total_amount,
                o.received_amount,
@@ -32,6 +35,7 @@
                o.remark
         from biz_customer_order o
         left join biz_customer c on o.customer_id = c.customer_id
+        left join biz_route r on c.route_id = r.route_id
         where o.delivery_id = #{deliveryId}
         order by o.order_id
     </select>

@@ -137,9 +137,6 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
             if (customer == null) {
                 throw new ServiceException("客户不存在");
             }
-            if (!Objects.equals(customer.getRouteId(), bo.getRouteId())) {
-                throw new ServiceException("客户不属于当前配送地");
-            }
 
             BizCustomerOrder customerOrder = new BizCustomerOrder();
             customerOrder.setDeliveryId(deliveryId);
