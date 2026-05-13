@@ -203,7 +203,15 @@ public class BizCustomerServiceImpl implements IBizCustomerService {
     public Boolean updateByBo(BizCustomerBo bo) {
         BizCustomer update = MapstructUtils.convert(bo, BizCustomer.class);
         validEntityBeforeSave(update);
-        return baseMapper.updateById(update) > 0;
+        int updatedRows = baseMapper.updateById(update);
+        int locationUpdatedRows = baseMapper.update(null, Wrappers.lambdaUpdate(BizCustomer.class)
+            .eq(BizCustomer::getCustomerId, bo.getCustomerId())
+            .set(BizCustomer::getMapLocation, bo.getMapLocation())
+            .set(BizCustomer::getLongitude, bo.getLongitude())
+            .set(BizCustomer::getLatitude, bo.getLatitude())
+            .set(BizCustomer::getMapAddress, bo.getMapAddress())
+            .set(BizCustomer::getMapProvider, bo.getMapProvider()));
+        return updatedRows > 0 || locationUpdatedRows > 0;
     }
 
     /**
