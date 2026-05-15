@@ -42,6 +42,12 @@ public class BizProductVo implements Serializable {
     private String categoryName;
 
     /**
+     * 单位
+     */
+    @ExcelProperty(value = "单位")
+    private String unit;
+
+    /**
      * 商品名称
      */
     @ExcelProperty(value = "商品名称")

@@ -34,6 +34,11 @@ public class BizProductCategory extends TenantEntity {
     private String categoryName;
 
     /**
+     * 单位
+     */
+    private String unit;
+
+    /**
      * 显示顺序
      */
     private Integer categorySort;

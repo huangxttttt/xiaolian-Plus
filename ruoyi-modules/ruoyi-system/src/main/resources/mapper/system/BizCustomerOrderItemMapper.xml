@@ -5,13 +5,16 @@
 <mapper namespace="org.dromara.system.mapper.BizCustomerOrderItemMapper">
 
     <select id="selectByOrderIds" resultType="org.dromara.system.domain.vo.BizCustomerOrderItemVo">
-        select item_id, order_id, product_id, product_name, specification, supplier, quantity, sale_price, cost_price, amount, remark
-        from biz_customer_order_item
-        where order_id in
+        select i.item_id, i.order_id, i.product_id, i.product_name, i.specification, i.supplier,
+               c.unit, i.quantity, i.sale_price, i.cost_price, i.amount, i.remark
+        from biz_customer_order_item i
+        left join biz_product p on i.product_id = p.product_id
+        left join biz_product_category c on p.category_id = c.category_id
+        where i.order_id in
         <foreach collection="orderIds" item="orderId" open="(" separator="," close=")">
             #{orderId}
         </foreach>
-        order by item_id
+        order by i.item_id
     </select>
 
     <select id="selectTopProductsByCustomerId" resultType="org.dromara.system.domain.vo.BizCustomerTopProductVo">

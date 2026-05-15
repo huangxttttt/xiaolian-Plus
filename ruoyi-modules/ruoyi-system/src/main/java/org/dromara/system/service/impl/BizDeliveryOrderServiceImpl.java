@@ -138,9 +138,15 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
                 throw new ServiceException("客户不存在");
             }
 
+            BigDecimal previousDebtAmount = customerOrderBo.getPreviousDebtAmount() == null ? BigDecimal.ZERO : customerOrderBo.getPreviousDebtAmount();
+            if (previousDebtAmount.compareTo(BigDecimal.ZERO) < 0) {
+                throw new ServiceException("客户欠款金额不能小于0");
+            }
+
             BizCustomerOrder customerOrder = new BizCustomerOrder();
             customerOrder.setDeliveryId(deliveryId);
             customerOrder.setCustomerId(customerOrderBo.getCustomerId());
+            customerOrder.setPreviousDebtAmount(previousDebtAmount);
             customerOrder.setRemark(customerOrderBo.getRemark());
             customerOrder.setTotalAmount(BigDecimal.ZERO);
             customerOrder.setReceivedAmount(BigDecimal.ZERO);
@@ -148,7 +154,11 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
             customerOrderMapper.insert(customerOrder);
 
             BigDecimal orderTotal = BigDecimal.ZERO;
-            for (BizCustomerOrderItemBo itemBo : customerOrderBo.getItems()) {
+            List<BizCustomerOrderItemBo> items = customerOrderBo.getItems() == null ? List.of() : customerOrderBo.getItems();
+            if (items.isEmpty() && previousDebtAmount.compareTo(BigDecimal.ZERO) == 0) {
+                throw new ServiceException(customer.getName() + " 未添加商品或欠款");
+            }
+            for (BizCustomerOrderItemBo itemBo : items) {
                 BizProduct product = productMapper.selectById(itemBo.getProductId());
                 if (product == null) {
                     throw new ServiceException("商品不存在");
@@ -173,9 +183,9 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
                 syncProductPrice(product, salePrice, costPrice, bo.getDeliveryDate());
             }
 
-            customerOrder.setTotalAmount(orderTotal);
+            customerOrder.setTotalAmount(orderTotal.add(previousDebtAmount));
             customerOrderMapper.updateById(customerOrder);
-            deliveryTotal = deliveryTotal.add(orderTotal);
+            deliveryTotal = deliveryTotal.add(orderTotal).add(previousDebtAmount);
         }
         return deliveryTotal;
     }
@@ -258,12 +268,17 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
             }
             BigDecimal currentDebt = customer.getDebt() == null ? BigDecimal.ZERO : customer.getDebt();
             BigDecimal orderAmount = order.getTotalAmount() == null ? BigDecimal.ZERO : order.getTotalAmount();
+            BigDecimal previousDebtAmount = order.getPreviousDebtAmount() == null ? BigDecimal.ZERO : order.getPreviousDebtAmount();
             BigDecimal receivedAmount = receiptMap.get(order.getOrderId());
             BigDecimal unpaidAmount = orderAmount.subtract(receivedAmount);
             order.setReceivedAmount(receivedAmount);
             order.setUnpaidAmount(unpaidAmount);
             customerOrderMapper.updateById(order);
-            customer.setDebt(currentDebt.add(unpaidAmount));
+            BigDecimal baseDebt = currentDebt.subtract(previousDebtAmount);
+            if (baseDebt.compareTo(BigDecimal.ZERO) < 0) {
+                baseDebt = BigDecimal.ZERO;
+            }
+            customer.setDebt(baseDebt.add(unpaidAmount));
             customerMapper.updateById(customer);
         }
         return true;

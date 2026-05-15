@@ -34,6 +34,12 @@ public class BizProductCategoryBo extends BaseEntity {
     private String categoryName;
 
     /**
+     * 单位
+     */
+    @NotBlank(message = "单位不能为空", groups = { AddGroup.class, EditGroup.class })
+    private String unit;
+
+    /**
      * 显示顺序
      */
     private Integer categorySort;

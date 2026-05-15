@@ -36,6 +36,12 @@ public class BizProductCategoryVo implements Serializable {
     private String categoryName;
 
     /**
+     * 单位
+     */
+    @ExcelProperty(value = "单位")
+    private String unit;
+
+    /**
      * 显示顺序
      */
     @ExcelProperty(value = "显示顺序")

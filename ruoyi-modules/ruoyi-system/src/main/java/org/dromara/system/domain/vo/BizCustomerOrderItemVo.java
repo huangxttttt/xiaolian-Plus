@@ -30,6 +30,8 @@ public class BizCustomerOrderItemVo implements Serializable {
 
     private String supplier;
 
+    private String unit;
+
     private BigDecimal quantity;
 
     private BigDecimal salePrice;

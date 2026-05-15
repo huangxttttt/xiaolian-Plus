@@ -12,6 +12,7 @@
         <result property="customerName" column="customer_name"/>
         <result property="customerAlias" column="customer_alias"/>
         <result property="customerPhone" column="customer_phone"/>
+        <result property="previousDebtAmount" column="previous_debt_amount"/>
         <result property="receivedAmount" column="received_amount"/>
         <result property="unpaidAmount" column="unpaid_amount"/>
     </resultMap>
@@ -29,6 +30,7 @@
                c.name as customer_name,
                c.alias as customer_alias,
                c.phone as customer_phone,
+               o.previous_debt_amount,
                o.total_amount,
                o.received_amount,
                o.unpaid_amount,
@@ -49,6 +51,7 @@
                o.customer_id,
                c.name as customer_name,
                c.phone as customer_phone,
+               o.previous_debt_amount,
                o.total_amount,
                o.received_amount,
                o.unpaid_amount,

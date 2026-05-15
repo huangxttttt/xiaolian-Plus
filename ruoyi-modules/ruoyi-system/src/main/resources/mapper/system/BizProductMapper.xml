@@ -7,10 +7,11 @@
     <resultMap type="org.dromara.system.domain.vo.BizProductVo" id="BizProductResult">
         <id property="productId" column="product_id"/>
         <result property="categoryName" column="category_name"/>
+        <result property="unit" column="unit"/>
     </resultMap>
 
     <sql id="selectProductVo">
-        select p.product_id, p.category_id, c.category_name, p.product_name, p.specification, p.supplier,
+        select p.product_id, p.category_id, c.category_name, c.unit, p.product_name, p.specification, p.supplier,
                p.latest_sale_amount, p.latest_cost_price, p.create_time, p.remark
         from (
             select * from biz_product ${ew.getCustomSqlSegment}
@@ -27,7 +28,7 @@
     </select>
 
     <select id="selectProductById" resultMap="BizProductResult">
-        select p.product_id, p.category_id, c.category_name, p.product_name, p.specification, p.supplier,
+        select p.product_id, p.category_id, c.category_name, c.unit, p.product_name, p.specification, p.supplier,
                p.latest_sale_amount, p.latest_cost_price, p.create_time, p.remark
         from biz_product p
         left join biz_product_category c on p.category_id = c.category_id
