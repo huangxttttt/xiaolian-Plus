@@ -277,13 +277,17 @@ public class SysTenantServiceImpl implements ISysTenantService {
     /**
      * 修改租户
      */
-    @CacheEvict(cacheNames = CacheNames.SYS_TENANT, key = "#bo.tenantId")
     @Override
     public Boolean updateByBo(SysTenantBo bo) {
+        SysTenant oldTenant = baseMapper.selectById(bo.getId());
         SysTenant tenant = MapstructUtils.convert(bo, SysTenant.class);
         tenant.setTenantId(null);
         tenant.setPackageId(null);
-        return baseMapper.updateById(tenant) > 0;
+        boolean updated = baseMapper.updateById(tenant) > 0;
+        if (updated && oldTenant != null) {
+            CacheUtils.evict(CacheNames.SYS_TENANT, oldTenant.getTenantId());
+        }
+        return updated;
     }
 
     /**
@@ -292,13 +296,17 @@ public class SysTenantServiceImpl implements ISysTenantService {
      * @param bo 租户信息
      * @return 结果
      */
-    @CacheEvict(cacheNames = CacheNames.SYS_TENANT, key = "#bo.tenantId")
     @Override
     public int updateTenantStatus(SysTenantBo bo) {
+        SysTenant oldTenant = baseMapper.selectById(bo.getId());
         SysTenant tenant = new SysTenant();
         tenant.setId(bo.getId());
         tenant.setStatus(bo.getStatus());
-        return baseMapper.updateById(tenant);
+        int rows = baseMapper.updateById(tenant);
+        if (rows > 0 && oldTenant != null) {
+            CacheUtils.evict(CacheNames.SYS_TENANT, oldTenant.getTenantId());
+        }
+        return rows;
     }
 
     /**
