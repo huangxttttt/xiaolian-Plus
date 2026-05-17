@@ -168,6 +168,14 @@ public class BizCustomerServiceImpl implements IBizCustomerService {
     private LambdaQueryWrapper<BizCustomer> buildQueryWrapper(BizCustomerQueryBo bo) {
         LambdaQueryWrapper<BizCustomer> lqw = Wrappers.lambdaQuery();
         lqw.orderByAsc(BizCustomer::getCustomerId);
+        lqw.and(StringUtils.isNotBlank(bo.getKeyword()), wrapper -> wrapper
+            .like(BizCustomer::getName, bo.getKeyword())
+            .or()
+            .like(BizCustomer::getAlias, bo.getKeyword())
+            .or()
+            .like(BizCustomer::getPhone, bo.getKeyword())
+            .or()
+            .like(BizCustomer::getContactName, bo.getKeyword()));
         lqw.like(StringUtils.isNotBlank(bo.getName()), BizCustomer::getName, bo.getName());
         lqw.eq(StringUtils.isNotBlank(bo.getAlias()), BizCustomer::getAlias, bo.getAlias());
         lqw.eq(StringUtils.isNotBlank(bo.getPhone()), BizCustomer::getPhone, bo.getPhone());

@@ -15,6 +15,11 @@ import lombok.EqualsAndHashCode;
 public class BizCustomerQueryBo extends BaseEntity {
 
     /**
+     * 快速搜索关键字
+     */
+    private String keyword;
+
+    /**
      * 客户名称
      */
     private String name;
