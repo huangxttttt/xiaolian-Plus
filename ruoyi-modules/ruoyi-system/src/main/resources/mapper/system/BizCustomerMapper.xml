@@ -55,15 +55,11 @@
         left join (
             select o.customer_id, count(*) as order_count
             from biz_customer_order o
-            inner join biz_delivery_order d on o.delivery_id = d.delivery_id
-            where d.route_id = #{routeId}
             group by o.customer_id
         ) s on c.customer_id = s.customer_id
         left join (
             select count(*) as route_order_count
             from biz_customer_order o
-            inner join biz_delivery_order d on o.delivery_id = d.delivery_id
-            where d.route_id = #{routeId}
         ) t on 1 = 1
         where c.route_id = #{routeId}
         order by c.customer_id

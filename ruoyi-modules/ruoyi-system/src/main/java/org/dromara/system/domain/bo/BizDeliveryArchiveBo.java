@@ -27,7 +27,12 @@ public class BizDeliveryArchiveBo {
         @NotNull(message = "客户订单ID不能为空")
         private Long orderId;
 
+        @NotNull(message = "应收金额不能为空")
+        private BigDecimal receivableAmount;
+
         @NotNull(message = "实收金额不能为空")
         private BigDecimal receivedAmount;
+
+        private BigDecimal repaymentAmount = BigDecimal.ZERO;
     }
 }

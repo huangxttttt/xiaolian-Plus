@@ -149,7 +149,9 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
             customerOrder.setPreviousDebtAmount(previousDebtAmount);
             customerOrder.setRemark(customerOrderBo.getRemark());
             customerOrder.setTotalAmount(BigDecimal.ZERO);
+            customerOrder.setReceivableAmount(BigDecimal.ZERO);
             customerOrder.setReceivedAmount(BigDecimal.ZERO);
+            customerOrder.setRepaymentAmount(BigDecimal.ZERO);
             customerOrder.setUnpaidAmount(BigDecimal.ZERO);
             customerOrderMapper.insert(customerOrder);
 
@@ -184,6 +186,7 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
             }
 
             customerOrder.setTotalAmount(orderTotal.add(previousDebtAmount));
+            customerOrder.setReceivableAmount(orderTotal.add(previousDebtAmount));
             customerOrderMapper.updateById(customerOrder);
             deliveryTotal = deliveryTotal.add(orderTotal).add(previousDebtAmount);
         }
@@ -229,9 +232,9 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
             throw new ServiceException("配送货单没有客户订单，不能归档");
         }
 
-        Map<Long, BigDecimal> receiptMap = new HashMap<>();
+        Map<Long, BizDeliveryArchiveBo.CustomerReceipt> receiptMap = new HashMap<>();
         for (BizDeliveryArchiveBo.CustomerReceipt receipt : bo.getReceipts()) {
-            BigDecimal old = receiptMap.put(receipt.getOrderId(), receipt.getReceivedAmount());
+            BizDeliveryArchiveBo.CustomerReceipt old = receiptMap.put(receipt.getOrderId(), receipt);
             if (old != null) {
                 throw new ServiceException("客户订单收款信息重复");
             }
@@ -244,12 +247,24 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
 
         for (BizCustomerOrder order : orders) {
             BigDecimal orderAmount = order.getTotalAmount() == null ? BigDecimal.ZERO : order.getTotalAmount();
-            BigDecimal receivedAmount = receiptMap.get(order.getOrderId());
+            BizDeliveryArchiveBo.CustomerReceipt receipt = receiptMap.get(order.getOrderId());
+            BigDecimal receivableAmount = receipt.getReceivableAmount();
+            BigDecimal receivedAmount = receipt.getReceivedAmount();
+            BigDecimal repaymentAmount = receipt.getRepaymentAmount() == null ? BigDecimal.ZERO : receipt.getRepaymentAmount();
+            if (receivableAmount == null || receivableAmount.compareTo(BigDecimal.ZERO) < 0) {
+                throw new ServiceException("应收金额不能小于0");
+            }
+            if (receivableAmount.compareTo(orderAmount) > 0) {
+                throw new ServiceException("应收金额不能大于订单金额");
+            }
             if (receivedAmount == null || receivedAmount.compareTo(BigDecimal.ZERO) < 0) {
                 throw new ServiceException("实收金额不能小于0");
             }
-            if (receivedAmount.compareTo(orderAmount) > 0) {
-                throw new ServiceException("实收金额不能大于订单金额");
+            if (receivedAmount.compareTo(receivableAmount) > 0) {
+                throw new ServiceException("实收金额不能大于应收金额");
+            }
+            if (repaymentAmount.compareTo(BigDecimal.ZERO) < 0) {
+                throw new ServiceException("还款金额不能小于0");
             }
         }
 
@@ -267,18 +282,25 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
                 throw new ServiceException("客户不存在");
             }
             BigDecimal currentDebt = customer.getDebt() == null ? BigDecimal.ZERO : customer.getDebt();
-            BigDecimal orderAmount = order.getTotalAmount() == null ? BigDecimal.ZERO : order.getTotalAmount();
             BigDecimal previousDebtAmount = order.getPreviousDebtAmount() == null ? BigDecimal.ZERO : order.getPreviousDebtAmount();
-            BigDecimal receivedAmount = receiptMap.get(order.getOrderId());
-            BigDecimal unpaidAmount = orderAmount.subtract(receivedAmount);
+            BizDeliveryArchiveBo.CustomerReceipt receipt = receiptMap.get(order.getOrderId());
+            BigDecimal receivableAmount = receipt.getReceivableAmount();
+            BigDecimal receivedAmount = receipt.getReceivedAmount();
+            BigDecimal repaymentAmount = receipt.getRepaymentAmount() == null ? BigDecimal.ZERO : receipt.getRepaymentAmount();
+            BigDecimal unpaidAmount = receivableAmount.subtract(receivedAmount);
+            order.setReceivableAmount(receivableAmount);
             order.setReceivedAmount(receivedAmount);
+            order.setRepaymentAmount(repaymentAmount);
             order.setUnpaidAmount(unpaidAmount);
             customerOrderMapper.updateById(order);
             BigDecimal baseDebt = currentDebt.subtract(previousDebtAmount);
             if (baseDebt.compareTo(BigDecimal.ZERO) < 0) {
                 baseDebt = BigDecimal.ZERO;
             }
-            customer.setDebt(baseDebt.add(unpaidAmount));
+            if (repaymentAmount.compareTo(baseDebt) > 0) {
+                throw new ServiceException(customer.getName() + " 的还款金额不能大于当前欠款余额");
+            }
+            customer.setDebt(baseDebt.subtract(repaymentAmount).add(unpaidAmount));
             customerMapper.updateById(customer);
         }
         return true;

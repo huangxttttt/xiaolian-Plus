@@ -13,7 +13,9 @@
         <result property="customerAlias" column="customer_alias"/>
         <result property="customerPhone" column="customer_phone"/>
         <result property="previousDebtAmount" column="previous_debt_amount"/>
+        <result property="receivableAmount" column="receivable_amount"/>
         <result property="receivedAmount" column="received_amount"/>
+        <result property="repaymentAmount" column="repayment_amount"/>
         <result property="unpaidAmount" column="unpaid_amount"/>
     </resultMap>
 
@@ -32,7 +34,9 @@
                c.phone as customer_phone,
                o.previous_debt_amount,
                o.total_amount,
+               o.receivable_amount,
                o.received_amount,
+               o.repayment_amount,
                o.unpaid_amount,
                o.remark
         from biz_customer_order o
@@ -53,7 +57,9 @@
                c.phone as customer_phone,
                o.previous_debt_amount,
                o.total_amount,
+               o.receivable_amount,
                o.received_amount,
+               o.repayment_amount,
                o.unpaid_amount,
                o.remark
         from biz_customer_order o

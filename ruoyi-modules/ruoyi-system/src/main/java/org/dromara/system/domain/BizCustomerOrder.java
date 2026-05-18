@@ -34,7 +34,11 @@ public class BizCustomerOrder extends TenantEntity {
 
     private BigDecimal totalAmount;
 
+    private BigDecimal receivableAmount;
+
     private BigDecimal receivedAmount;
+
+    private BigDecimal repaymentAmount;
 
     private BigDecimal unpaidAmount;
 
