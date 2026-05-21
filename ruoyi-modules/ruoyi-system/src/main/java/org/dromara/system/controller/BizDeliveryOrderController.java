@@ -85,6 +85,15 @@ public class BizDeliveryOrderController extends BaseController {
         return toAjax(bizDeliveryOrderService.archiveById(deliveryId, bo));
     }
 
+    @SaCheckPermission("system:deliveryOrder:edit")
+    @Log(title = "配送货单重算成本", businessType = BusinessType.UPDATE)
+    @RepeatSubmit()
+    @PutMapping("/{deliveryId}/recalculateCost")
+    public R<Integer> recalculateCost(@NotNull(message = "主键不能为空")
+                                      @PathVariable Long deliveryId) {
+        return R.ok(bizDeliveryOrderService.recalculateArchivedCost(deliveryId));
+    }
+
     @SaCheckPermission("system:deliveryOrder:remove")
     @Log(title = "配送货单", businessType = BusinessType.DELETE)
     @DeleteMapping("/{deliveryIds}")

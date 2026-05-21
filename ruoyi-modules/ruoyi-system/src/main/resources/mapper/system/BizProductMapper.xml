@@ -6,8 +6,16 @@
 
     <resultMap type="org.dromara.system.domain.vo.BizProductVo" id="BizProductResult">
         <id property="productId" column="product_id"/>
+        <result property="categoryId" column="category_id"/>
         <result property="categoryName" column="category_name"/>
         <result property="unit" column="unit"/>
+        <result property="productName" column="product_name"/>
+        <result property="specification" column="specification"/>
+        <result property="supplier" column="supplier"/>
+        <result property="latestSaleAmount" column="latest_sale_amount"/>
+        <result property="latestCostPrice" column="latest_cost_price"/>
+        <result property="createTime" column="create_time"/>
+        <result property="remark" column="remark"/>
     </resultMap>
 
     <sql id="selectProductVo">

@@ -192,6 +192,7 @@ public class BizCustomerServiceImpl implements IBizCustomerService {
      */
     @Override
     public Boolean insertByBo(BizCustomerBo bo) {
+        normalizeDebt(bo);
         BizCustomer add = MapstructUtils.convert(bo, BizCustomer.class);
         validEntityBeforeSave(add);
         boolean flag = baseMapper.insert(add) > 0;
@@ -209,6 +210,7 @@ public class BizCustomerServiceImpl implements IBizCustomerService {
      */
     @Override
     public Boolean updateByBo(BizCustomerBo bo) {
+        normalizeDebt(bo);
         BizCustomer update = MapstructUtils.convert(bo, BizCustomer.class);
         validEntityBeforeSave(update);
         int updatedRows = baseMapper.updateById(update);
@@ -220,6 +222,12 @@ public class BizCustomerServiceImpl implements IBizCustomerService {
             .set(BizCustomer::getMapAddress, bo.getMapAddress())
             .set(BizCustomer::getMapProvider, bo.getMapProvider()));
         return updatedRows > 0 || locationUpdatedRows > 0;
+    }
+
+    private void normalizeDebt(BizCustomerBo bo) {
+        if (bo.getDebt() == null) {
+            bo.setDebt(BigDecimal.ZERO);
+        }
     }
 
     /**

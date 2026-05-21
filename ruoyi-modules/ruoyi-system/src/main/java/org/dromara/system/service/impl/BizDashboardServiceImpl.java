@@ -39,7 +39,7 @@ public class BizDashboardServiceImpl implements IBizDashboardService {
 
         BizDashboardSummaryVo summary = new BizDashboardSummaryVo();
         summary.setTodaySales(buildMetric(today, tomorrow, yesterday, today, today.minusDays(6), tomorrow, false));
-        summary.setMonthSales(buildMetric(monthStart, nextMonthStart, lastMonthStart, monthStart, monthStart, tomorrow, false));
+        summary.setMonthSales(buildMetric(monthStart, nextMonthStart, lastMonthStart, monthStart, yearStart, nextYearStart, true));
         summary.setYearSales(buildMetric(yearStart, nextYearStart, lastYearStart, yearStart, yearStart, nextYearStart, true));
         summary.getTodayOrders().setCustomerCount(defaultLong(dashboardMapper.selectDistinctCustomerCountAllStatus(today, tomorrow)));
         summary.getTodayOrders().setOrderCount(defaultLong(dashboardMapper.selectCustomerOrderCountAllStatus(today, tomorrow)));

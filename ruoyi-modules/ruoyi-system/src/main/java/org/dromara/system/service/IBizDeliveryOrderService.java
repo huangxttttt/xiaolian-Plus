@@ -29,5 +29,7 @@ public interface IBizDeliveryOrderService {
 
     Boolean archiveById(Long deliveryId, BizDeliveryArchiveBo bo);
 
+    Integer recalculateArchivedCost(Long deliveryId);
+
     Boolean deleteWithValidByIds(Collection<Long> ids, Boolean isValid);
 }

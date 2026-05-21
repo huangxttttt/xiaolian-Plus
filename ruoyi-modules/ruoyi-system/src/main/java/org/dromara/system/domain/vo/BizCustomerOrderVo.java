@@ -28,6 +28,8 @@ public class BizCustomerOrderVo implements Serializable {
 
     private String routeName;
 
+    private Long routeId;
+
     private String deliveryStatus;
 
     private Long customerId;
@@ -37,6 +39,14 @@ public class BizCustomerOrderVo implements Serializable {
     private String customerAlias;
 
     private String customerPhone;
+
+    private String mapLocation;
+
+    private BigDecimal longitude;
+
+    private BigDecimal latitude;
+
+    private String mapAddress;
 
     private BigDecimal previousDebtAmount;
 

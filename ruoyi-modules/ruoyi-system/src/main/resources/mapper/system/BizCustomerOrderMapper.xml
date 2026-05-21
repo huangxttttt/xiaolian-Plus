@@ -7,11 +7,16 @@
     <resultMap type="org.dromara.system.domain.vo.BizCustomerOrderVo" id="BizCustomerOrderResult">
         <id property="orderId" column="order_id"/>
         <result property="deliveryDate" column="delivery_date"/>
+        <result property="routeId" column="route_id"/>
         <result property="routeName" column="route_name"/>
         <result property="deliveryStatus" column="delivery_status"/>
         <result property="customerName" column="customer_name"/>
         <result property="customerAlias" column="customer_alias"/>
         <result property="customerPhone" column="customer_phone"/>
+        <result property="mapLocation" column="map_location"/>
+        <result property="longitude" column="longitude"/>
+        <result property="latitude" column="latitude"/>
+        <result property="mapAddress" column="map_address"/>
         <result property="previousDebtAmount" column="previous_debt_amount"/>
         <result property="receivableAmount" column="receivable_amount"/>
         <result property="receivedAmount" column="received_amount"/>
@@ -28,10 +33,15 @@
         select o.order_id,
                o.delivery_id,
                o.customer_id,
+               c.route_id,
                r.route_name,
                c.name as customer_name,
                c.alias as customer_alias,
                c.phone as customer_phone,
+               c.map_location,
+               c.longitude,
+               c.latitude,
+               c.map_address,
                o.previous_debt_amount,
                o.total_amount,
                o.receivable_amount,
@@ -50,11 +60,16 @@
         select o.order_id,
                o.delivery_id,
                d.delivery_date,
+               c.route_id,
                r.route_name,
                d.status as delivery_status,
                o.customer_id,
                c.name as customer_name,
                c.phone as customer_phone,
+               c.map_location,
+               c.longitude,
+               c.latitude,
+               c.map_address,
                o.previous_debt_amount,
                o.total_amount,
                o.receivable_amount,

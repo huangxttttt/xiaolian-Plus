@@ -9,7 +9,6 @@
         from biz_delivery_order
         where delivery_date &gt;= #{beginDate}
           and delivery_date &lt; #{endDate}
-          and status = '已归档'
     </select>
 
     <select id="selectSalesAmountByStatus" resultType="java.math.BigDecimal">
@@ -26,7 +25,6 @@
         inner join biz_delivery_order d on o.delivery_id = d.delivery_id
         where d.delivery_date &gt;= #{beginDate}
           and d.delivery_date &lt; #{endDate}
-          and d.status = '已归档'
     </select>
 
     <select id="selectDistinctCustomerCount" resultType="java.lang.Long">
@@ -35,7 +33,6 @@
         inner join biz_delivery_order d on o.delivery_id = d.delivery_id
         where d.delivery_date &gt;= #{beginDate}
           and d.delivery_date &lt; #{endDate}
-          and d.status = '已归档'
     </select>
 
     <select id="selectCustomerOrderCountAllStatus" resultType="java.lang.Long">
@@ -60,7 +57,6 @@
         from biz_delivery_order
         where delivery_date &gt;= #{beginDate}
           and delivery_date &lt; #{endDate}
-          and status = '已归档'
         group by delivery_date
         order by delivery_date
     </select>
@@ -71,7 +67,6 @@
         from biz_delivery_order
         where delivery_date &gt;= #{beginDate}
           and delivery_date &lt; #{endDate}
-          and status = '已归档'
         group by date_format(delivery_date, '%Y-%m')
         order by date_format(delivery_date, '%Y-%m')
     </select>
@@ -91,7 +86,6 @@
         left join biz_route r on d.route_id = r.route_id
         where d.delivery_date &gt;= #{beginDate}
           and d.delivery_date &lt; #{endDate}
-          and d.status = '已归档'
         group by o.customer_id, c.name
         order by amount desc
         limit 10
@@ -104,7 +98,6 @@
         inner join biz_delivery_order d on o.delivery_id = d.delivery_id
         where d.delivery_date &gt;= #{beginDate}
           and d.delivery_date &lt; #{endDate}
-          and d.status = '已归档'
     </select>
 
     <select id="selectProductRanks" resultType="org.dromara.system.domain.vo.BizDashboardProductRankVo">
@@ -122,7 +115,6 @@
         inner join biz_delivery_order d on o.delivery_id = d.delivery_id
         where d.delivery_date &gt;= #{beginDate}
           and d.delivery_date &lt; #{endDate}
-          and d.status = '已归档'
         group by i.product_id, i.product_name, i.specification
         order by quantity desc, amount desc
         limit 10
@@ -141,7 +133,6 @@
         inner join biz_delivery_order d on o.delivery_id = d.delivery_id
         where d.delivery_date &gt;= #{beginDate}
           and d.delivery_date &lt; #{endDate}
-          and d.status = '已归档'
     </select>
 
     <select id="selectCustomerProfitRanks" resultType="org.dromara.system.domain.vo.BizDashboardProfitRankVo">
@@ -167,7 +158,6 @@
         left join biz_route r on d.route_id = r.route_id
         where d.delivery_date &gt;= #{beginDate}
           and d.delivery_date &lt; #{endDate}
-          and d.status = '已归档'
         group by o.customer_id, c.name
         order by profitAmount desc, salesAmount desc
         limit 10
@@ -194,7 +184,6 @@
         inner join biz_delivery_order d on o.delivery_id = d.delivery_id
         where d.delivery_date &gt;= #{beginDate}
           and d.delivery_date &lt; #{endDate}
-          and d.status = '已归档'
         group by i.product_id, i.product_name, i.specification
         order by profitAmount desc, salesAmount desc
         limit 10
@@ -221,7 +210,6 @@
         left join biz_route r on d.route_id = r.route_id
         where d.delivery_date &gt;= #{beginDate}
           and d.delivery_date &lt; #{endDate}
-          and d.status = '已归档'
         group by d.route_id, r.route_name
         order by profitAmount desc, salesAmount desc
         limit 10

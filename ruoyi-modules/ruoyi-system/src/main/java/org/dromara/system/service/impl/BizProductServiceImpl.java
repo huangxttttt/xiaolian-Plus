@@ -132,7 +132,15 @@ public class BizProductServiceImpl implements IBizProductService {
     public Boolean updateByBo(BizProductBo bo) {
         BizProduct update = MapstructUtils.convert(bo, BizProduct.class);
         validEntityBeforeSave(update);
-        boolean flag = baseMapper.updateById(update) > 0;
+        boolean flag = baseMapper.update(null, Wrappers.lambdaUpdate(BizProduct.class)
+            .eq(BizProduct::getProductId, bo.getProductId())
+            .set(BizProduct::getCategoryId, bo.getCategoryId())
+            .set(BizProduct::getProductName, bo.getProductName())
+            .set(BizProduct::getSpecification, bo.getSpecification())
+            .set(BizProduct::getSupplier, bo.getSupplier())
+            .set(BizProduct::getLatestSaleAmount, bo.getLatestSaleAmount())
+            .set(BizProduct::getLatestCostPrice, bo.getLatestCostPrice())
+            .set(BizProduct::getRemark, bo.getRemark())) > 0;
         if (flag) {
             saveTodayPriceRecord(update);
         }

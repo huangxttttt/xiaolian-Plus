@@ -246,16 +246,12 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
         }
 
         for (BizCustomerOrder order : orders) {
-            BigDecimal orderAmount = order.getTotalAmount() == null ? BigDecimal.ZERO : order.getTotalAmount();
             BizDeliveryArchiveBo.CustomerReceipt receipt = receiptMap.get(order.getOrderId());
             BigDecimal receivableAmount = receipt.getReceivableAmount();
             BigDecimal receivedAmount = receipt.getReceivedAmount();
             BigDecimal repaymentAmount = receipt.getRepaymentAmount() == null ? BigDecimal.ZERO : receipt.getRepaymentAmount();
             if (receivableAmount == null || receivableAmount.compareTo(BigDecimal.ZERO) < 0) {
                 throw new ServiceException("应收金额不能小于0");
-            }
-            if (receivableAmount.compareTo(orderAmount) > 0) {
-                throw new ServiceException("应收金额不能大于订单金额");
             }
             if (receivedAmount == null || receivedAmount.compareTo(BigDecimal.ZERO) < 0) {
                 throw new ServiceException("实收金额不能小于0");
@@ -304,6 +300,55 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
             customerMapper.updateById(customer);
         }
         return true;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Integer recalculateArchivedCost(Long deliveryId) {
+        BizDeliveryOrder delivery = baseMapper.selectById(deliveryId);
+        if (delivery == null) {
+            throw new ServiceException("配送货单不存在");
+        }
+        if (!"已归档".equals(delivery.getStatus())) {
+            throw new ServiceException("只有已归档的配送货单才能重算成本");
+        }
+
+        List<BizCustomerOrder> orders = customerOrderMapper.selectList(Wrappers.lambdaQuery(BizCustomerOrder.class)
+            .eq(BizCustomerOrder::getDeliveryId, deliveryId));
+        if (orders.isEmpty()) {
+            return 0;
+        }
+
+        List<Long> orderIds = orders.stream().map(BizCustomerOrder::getOrderId).toList();
+        List<BizCustomerOrderItem> items = itemMapper.selectList(Wrappers.lambdaQuery(BizCustomerOrderItem.class)
+            .in(BizCustomerOrderItem::getOrderId, orderIds));
+        List<BizCustomerOrderItem> zeroCostItems = items.stream()
+            .filter(item -> item.getProductId() != null)
+            .filter(item -> item.getCostPrice() == null || item.getCostPrice().compareTo(BigDecimal.ZERO) <= 0)
+            .toList();
+        if (zeroCostItems.isEmpty()) {
+            return 0;
+        }
+
+        List<Long> productIds = zeroCostItems.stream()
+            .map(BizCustomerOrderItem::getProductId)
+            .distinct()
+            .toList();
+        Map<Long, BizProduct> productMap = productMapper.selectByIds(productIds).stream()
+            .collect(Collectors.toMap(BizProduct::getProductId, product -> product));
+
+        int updated = 0;
+        for (BizCustomerOrderItem item : zeroCostItems) {
+            BizProduct product = productMap.get(item.getProductId());
+            if (product == null || product.getLatestCostPrice() == null || product.getLatestCostPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            BizCustomerOrderItem update = new BizCustomerOrderItem();
+            update.setItemId(item.getItemId());
+            update.setCostPrice(product.getLatestCostPrice());
+            updated += itemMapper.updateById(update);
+        }
+        return updated;
     }
 
     private void fillChildren(BizDeliveryOrderVo vo) {
