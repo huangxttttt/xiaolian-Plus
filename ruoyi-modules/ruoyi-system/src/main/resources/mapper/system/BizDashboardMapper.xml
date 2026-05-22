@@ -5,18 +5,22 @@
 <mapper namespace="org.dromara.system.mapper.BizDashboardMapper">
 
     <select id="selectSalesAmount" resultType="java.math.BigDecimal">
-        select coalesce(sum(total_amount), 0)
-        from biz_delivery_order
-        where delivery_date &gt;= #{beginDate}
-          and delivery_date &lt; #{endDate}
+        select coalesce(sum(i.amount), 0)
+        from biz_customer_order_item i
+        inner join biz_customer_order o on i.order_id = o.order_id
+        inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+        where d.delivery_date &gt;= #{beginDate}
+          and d.delivery_date &lt; #{endDate}
     </select>
 
     <select id="selectSalesAmountByStatus" resultType="java.math.BigDecimal">
-        select coalesce(sum(total_amount), 0)
-        from biz_delivery_order
-        where delivery_date &gt;= #{beginDate}
-          and delivery_date &lt; #{endDate}
-          and status = #{status}
+        select coalesce(sum(i.amount), 0)
+        from biz_customer_order_item i
+        inner join biz_customer_order o on i.order_id = o.order_id
+        inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+        where d.delivery_date &gt;= #{beginDate}
+          and d.delivery_date &lt; #{endDate}
+          and d.status = #{status}
     </select>
 
     <select id="selectCustomerOrderCount" resultType="java.lang.Long">
@@ -52,35 +56,40 @@
     </select>
 
     <select id="selectDailySalesTrend" resultType="org.dromara.system.domain.vo.BizDashboardTrendPointVo">
-        select date_format(delivery_date, '%m-%d') as label,
-               coalesce(sum(total_amount), 0) as amount
-        from biz_delivery_order
-        where delivery_date &gt;= #{beginDate}
-          and delivery_date &lt; #{endDate}
-        group by delivery_date
-        order by delivery_date
+        select date_format(d.delivery_date, '%m-%d') as label,
+               coalesce(sum(i.amount), 0) as amount
+        from biz_customer_order_item i
+        inner join biz_customer_order o on i.order_id = o.order_id
+        inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+        where d.delivery_date &gt;= #{beginDate}
+          and d.delivery_date &lt; #{endDate}
+        group by d.delivery_date
+        order by d.delivery_date
     </select>
 
     <select id="selectMonthlySalesTrend" resultType="org.dromara.system.domain.vo.BizDashboardTrendPointVo">
-        select date_format(delivery_date, '%Y-%m') as label,
-               coalesce(sum(total_amount), 0) as amount
-        from biz_delivery_order
-        where delivery_date &gt;= #{beginDate}
-          and delivery_date &lt; #{endDate}
-        group by date_format(delivery_date, '%Y-%m')
-        order by date_format(delivery_date, '%Y-%m')
+        select date_format(d.delivery_date, '%Y-%m') as label,
+               coalesce(sum(i.amount), 0) as amount
+        from biz_customer_order_item i
+        inner join biz_customer_order o on i.order_id = o.order_id
+        inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+        where d.delivery_date &gt;= #{beginDate}
+          and d.delivery_date &lt; #{endDate}
+        group by date_format(d.delivery_date, '%Y-%m')
+        order by date_format(d.delivery_date, '%Y-%m')
     </select>
 
     <select id="selectCustomerRanks" resultType="org.dromara.system.domain.vo.BizDashboardCustomerRankVo">
         select c.name as customerName,
                max(r.route_name) as routeName,
-               count(o.order_id) as orderCount,
-               coalesce(sum(o.total_amount), 0) as amount,
+               count(distinct o.order_id) as orderCount,
+               coalesce(sum(i.amount), 0) as amount,
                case
-                   when #{totalAmount} &gt; 0 then round(coalesce(sum(o.total_amount), 0) / #{totalAmount} * 100, 1)
+                   when #{totalAmount} &gt; 0 then round(coalesce(sum(i.amount), 0) / #{totalAmount} * 100, 1)
                    else 0
                end as percent
-        from biz_customer_order o
+        from biz_customer_order_item i
+        inner join biz_customer_order o on i.order_id = o.order_id
         inner join biz_delivery_order d on o.delivery_id = d.delivery_id
         left join biz_customer c on o.customer_id = c.customer_id
         left join biz_route r on d.route_id = r.route_id

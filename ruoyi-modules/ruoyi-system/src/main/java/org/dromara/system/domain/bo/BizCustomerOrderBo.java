@@ -25,6 +25,9 @@ public class BizCustomerOrderBo {
 
     private BigDecimal previousDebtAmount;
 
+    @Valid
+    private List<BizCustomerDebtSourceBo> previousDebtSources;
+
     private String remark;
 
     @Valid

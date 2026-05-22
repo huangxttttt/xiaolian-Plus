@@ -11,6 +11,7 @@ import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.system.domain.*;
 import org.dromara.system.domain.bo.BizDeliveryArchiveBo;
+import org.dromara.system.domain.bo.BizCustomerDebtSourceBo;
 import org.dromara.system.domain.bo.BizCustomerOrderBo;
 import org.dromara.system.domain.bo.BizCustomerOrderItemBo;
 import org.dromara.system.domain.bo.BizDeliveryOrderBo;
@@ -45,6 +46,8 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
     private final BizCustomerMapper customerMapper;
     private final BizProductMapper productMapper;
     private final BizProductPriceRecordMapper priceRecordMapper;
+    private final BizCustomerDebtRecordMapper debtRecordMapper;
+    private final BizCustomerDebtCarryMapper debtCarryMapper;
 
     @Override
     public BizDeliveryOrderVo queryById(Long deliveryId) {
@@ -101,6 +104,7 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
         if ("已归档".equals(old.getStatus())) {
             throw new ServiceException("已归档的配送货单不能修改");
         }
+        releaseCarriedDebtRecords(List.of(bo.getDeliveryId()));
         deleteChildren(List.of(bo.getDeliveryId()));
         BigDecimal totalAmount = saveCustomerOrders(bo.getDeliveryId(), bo);
         BizDeliveryOrder delivery = buildDelivery(bo, StringUtils.blankToDefault(old.getStatus(), "未归档"));
@@ -138,15 +142,10 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
                 throw new ServiceException("客户不存在");
             }
 
-            BigDecimal previousDebtAmount = customerOrderBo.getPreviousDebtAmount() == null ? BigDecimal.ZERO : customerOrderBo.getPreviousDebtAmount();
-            if (previousDebtAmount.compareTo(BigDecimal.ZERO) < 0) {
-                throw new ServiceException("客户欠款金额不能小于0");
-            }
-
             BizCustomerOrder customerOrder = new BizCustomerOrder();
             customerOrder.setDeliveryId(deliveryId);
             customerOrder.setCustomerId(customerOrderBo.getCustomerId());
-            customerOrder.setPreviousDebtAmount(previousDebtAmount);
+            customerOrder.setPreviousDebtAmount(BigDecimal.ZERO);
             customerOrder.setRemark(customerOrderBo.getRemark());
             customerOrder.setTotalAmount(BigDecimal.ZERO);
             customerOrder.setReceivableAmount(BigDecimal.ZERO);
@@ -154,6 +153,9 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
             customerOrder.setRepaymentAmount(BigDecimal.ZERO);
             customerOrder.setUnpaidAmount(BigDecimal.ZERO);
             customerOrderMapper.insert(customerOrder);
+
+            BigDecimal previousDebtAmount = carryDebtRecords(customerOrder, customerOrderBo);
+            customerOrder.setPreviousDebtAmount(previousDebtAmount);
 
             BigDecimal orderTotal = BigDecimal.ZERO;
             List<BizCustomerOrderItemBo> items = customerOrderBo.getItems() == null ? List.of() : customerOrderBo.getItems();
@@ -278,12 +280,13 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
                 throw new ServiceException("客户不存在");
             }
             BigDecimal currentDebt = customer.getDebt() == null ? BigDecimal.ZERO : customer.getDebt();
-            BigDecimal previousDebtAmount = order.getPreviousDebtAmount() == null ? BigDecimal.ZERO : order.getPreviousDebtAmount();
             BizDeliveryArchiveBo.CustomerReceipt receipt = receiptMap.get(order.getOrderId());
             BigDecimal receivableAmount = receipt.getReceivableAmount();
             BigDecimal receivedAmount = receipt.getReceivedAmount();
             BigDecimal repaymentAmount = receipt.getRepaymentAmount() == null ? BigDecimal.ZERO : receipt.getRepaymentAmount();
             BigDecimal unpaidAmount = receivableAmount.subtract(receivedAmount);
+            BigDecimal previousDebtAmount = order.getPreviousDebtAmount() == null ? BigDecimal.ZERO : order.getPreviousDebtAmount();
+            BigDecimal orderDebtRemaining = upsertArchivedOrderDebtRecord(order, delivery, unpaidAmount);
             order.setReceivableAmount(receivableAmount);
             order.setReceivedAmount(receivedAmount);
             order.setRepaymentAmount(repaymentAmount);
@@ -293,10 +296,11 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
             if (baseDebt.compareTo(BigDecimal.ZERO) < 0) {
                 baseDebt = BigDecimal.ZERO;
             }
-            if (repaymentAmount.compareTo(baseDebt) > 0) {
-                throw new ServiceException(customer.getName() + " 的还款金额不能大于当前欠款余额");
+            BigDecimal debtAfterRepayment = baseDebt.subtract(repaymentAmount);
+            if (debtAfterRepayment.compareTo(BigDecimal.ZERO) < 0) {
+                debtAfterRepayment = BigDecimal.ZERO;
             }
-            customer.setDebt(baseDebt.subtract(repaymentAmount).add(unpaidAmount));
+            customer.setDebt(debtAfterRepayment.add(orderDebtRemaining));
             customerMapper.updateById(customer);
         }
         return true;
@@ -373,8 +377,141 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
         if (archivedCount > 0) {
             throw new ServiceException("已归档的配送货单不能删除");
         }
+        releaseCarriedDebtRecords(ids);
         deleteChildren(ids);
         return baseMapper.deleteByIds(ids) > 0;
+    }
+
+    private BigDecimal carryDebtRecords(BizCustomerOrder customerOrder, BizCustomerOrderBo customerOrderBo) {
+        List<BizCustomerDebtSourceBo> sources = customerOrderBo.getPreviousDebtSources() == null ? List.of() : customerOrderBo.getPreviousDebtSources();
+        if (sources.isEmpty()) {
+            BigDecimal fallbackAmount = customerOrderBo.getPreviousDebtAmount() == null ? BigDecimal.ZERO : customerOrderBo.getPreviousDebtAmount();
+            if (fallbackAmount.compareTo(BigDecimal.ZERO) < 0) {
+                throw new ServiceException("客户欠款金额不能小于0");
+            }
+            return fallbackAmount;
+        }
+
+        BigDecimal total = BigDecimal.ZERO;
+        Set<Long> recordIds = new HashSet<>();
+        for (BizCustomerDebtSourceBo source : sources) {
+            if (!recordIds.add(source.getRecordId())) {
+                throw new ServiceException("欠款来源不能重复选择");
+            }
+            BizCustomerDebtRecord record = debtRecordMapper.selectById(source.getRecordId());
+            if (record == null || !Objects.equals(record.getCustomerId(), customerOrder.getCustomerId())) {
+                throw new ServiceException("欠款来源不存在或不属于当前客户");
+            }
+            BigDecimal amount = source.getAmount() == null ? record.getRemainingAmount() : source.getAmount();
+            amount = amount == null ? BigDecimal.ZERO : amount;
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ServiceException("带入欠款金额必须大于0");
+            }
+            BigDecimal remainingAmount = record.getRemainingAmount() == null ? BigDecimal.ZERO : record.getRemainingAmount();
+            if (amount.compareTo(remainingAmount) > 0) {
+                throw new ServiceException("带入欠款金额不能大于来源剩余欠款");
+            }
+
+            BizCustomerDebtCarry carry = new BizCustomerDebtCarry();
+            carry.setRecordId(record.getRecordId());
+            carry.setCustomerId(customerOrder.getCustomerId());
+            carry.setTargetOrderId(customerOrder.getOrderId());
+            carry.setAmount(amount);
+            carry.setRemark("配货订单带入欠款");
+            debtCarryMapper.insert(carry);
+
+            BigDecimal carriedAmount = defaultDecimal(record.getCarriedAmount()).add(amount);
+            BigDecimal newRemaining = remainingAmount.subtract(amount);
+            record.setCarriedAmount(carriedAmount);
+            record.setRemainingAmount(newRemaining);
+            record.setStatus(newRemaining.compareTo(BigDecimal.ZERO) > 0 ? record.getStatus() : "CARRIED");
+            debtRecordMapper.updateById(record);
+            total = total.add(amount);
+        }
+        return total;
+    }
+
+    private void releaseCarriedDebtRecords(Collection<Long> deliveryIds) {
+        List<BizCustomerOrder> orders = customerOrderMapper.selectList(Wrappers.lambdaQuery(BizCustomerOrder.class)
+            .in(BizCustomerOrder::getDeliveryId, deliveryIds));
+        if (orders.isEmpty()) {
+            return;
+        }
+        List<Long> orderIds = orders.stream().map(BizCustomerOrder::getOrderId).toList();
+        List<BizCustomerDebtCarry> carries = debtCarryMapper.selectList(Wrappers.lambdaQuery(BizCustomerDebtCarry.class)
+            .in(BizCustomerDebtCarry::getTargetOrderId, orderIds));
+        if (carries.isEmpty()) {
+            return;
+        }
+        Map<Long, BigDecimal> releaseAmountMap = carries.stream()
+            .collect(Collectors.groupingBy(
+                BizCustomerDebtCarry::getRecordId,
+                Collectors.mapping(carry -> defaultDecimal(carry.getAmount()), Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
+            ));
+        for (Map.Entry<Long, BigDecimal> entry : releaseAmountMap.entrySet()) {
+            BizCustomerDebtRecord record = debtRecordMapper.selectById(entry.getKey());
+            if (record == null) {
+                continue;
+            }
+            BigDecimal carriedAmount = defaultDecimal(record.getCarriedAmount()).subtract(entry.getValue());
+            if (carriedAmount.compareTo(BigDecimal.ZERO) < 0) {
+                carriedAmount = BigDecimal.ZERO;
+            }
+            BigDecimal remainingAmount = defaultDecimal(record.getOriginalAmount()).subtract(carriedAmount);
+            if (remainingAmount.compareTo(BigDecimal.ZERO) < 0) {
+                remainingAmount = BigDecimal.ZERO;
+            }
+            record.setCarriedAmount(carriedAmount);
+            record.setRemainingAmount(remainingAmount);
+            record.setStatus(remainingAmount.compareTo(BigDecimal.ZERO) > 0 ? ("ORDER_UNPAID".equals(record.getSourceType()) ? "OPEN" : "OPEN") : "CLEARED");
+            debtRecordMapper.updateById(record);
+        }
+        debtCarryMapper.delete(Wrappers.lambdaQuery(BizCustomerDebtCarry.class).in(BizCustomerDebtCarry::getTargetOrderId, orderIds));
+    }
+
+    private BigDecimal upsertArchivedOrderDebtRecord(BizCustomerOrder order, BizDeliveryOrder delivery, BigDecimal unpaidAmount) {
+        BigDecimal amount = defaultDecimal(unpaidAmount);
+        BizCustomerDebtRecord record = debtRecordMapper.selectOne(Wrappers.lambdaQuery(BizCustomerDebtRecord.class)
+            .eq(BizCustomerDebtRecord::getSourceOrderId, order.getOrderId()));
+        if (record == null && amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        if (record == null) {
+            record = new BizCustomerDebtRecord();
+            record.setCustomerId(order.getCustomerId());
+            record.setSourceType("ORDER_UNPAID");
+            record.setSourceDeliveryId(delivery.getDeliveryId());
+            record.setSourceOrderId(order.getOrderId());
+            record.setCarriedAmount(BigDecimal.ZERO);
+            record.setRemark("订单欠款");
+        }
+        BigDecimal carriedAmount = record.getRecordId() == null ? BigDecimal.ZERO : debtCarryMapper.selectList(Wrappers.lambdaQuery(BizCustomerDebtCarry.class)
+                    .eq(BizCustomerDebtCarry::getRecordId, record.getRecordId()))
+                .stream()
+                .map(BizCustomerDebtCarry::getAmount)
+                .map(this::defaultDecimal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal remainingAmount = amount.subtract(carriedAmount);
+        if (remainingAmount.compareTo(BigDecimal.ZERO) < 0) {
+            remainingAmount = BigDecimal.ZERO;
+        }
+        record.setCustomerId(order.getCustomerId());
+        record.setSourceDeliveryId(delivery.getDeliveryId());
+        record.setSourceOrderId(order.getOrderId());
+        record.setOriginalAmount(amount);
+        record.setCarriedAmount(carriedAmount);
+        record.setRemainingAmount(remainingAmount);
+        record.setStatus(remainingAmount.compareTo(BigDecimal.ZERO) > 0 ? "OPEN" : "CLEARED");
+        if (record.getRecordId() == null) {
+            debtRecordMapper.insert(record);
+        } else {
+            debtRecordMapper.updateById(record);
+        }
+        return remainingAmount;
+    }
+
+    private BigDecimal defaultDecimal(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     private void deleteChildren(Collection<Long> deliveryIds) {

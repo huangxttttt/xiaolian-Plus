@@ -23,6 +23,7 @@ import org.dromara.system.domain.vo.BizCustomerVo;
 import org.dromara.system.domain.vo.BizCustomerOrderSummaryVo;
 import org.dromara.system.domain.vo.BizCustomerOrderVo;
 import org.dromara.system.domain.vo.BizCustomerTopProductVo;
+import org.dromara.system.domain.vo.BizCustomerDebtRecordVo;
 import org.dromara.system.domain.vo.BizRouteCustomerOrderStatsVo;
 import org.dromara.system.domain.bo.BizCustomerBo;
 import org.dromara.system.domain.bo.BizCustomerQueryBo;
@@ -115,6 +116,19 @@ public class BizCustomerController extends BaseController {
     public R<List<BizCustomerTopProductVo>> getTopProducts(@NotNull(message = "主键不能为空")
                                                            @PathVariable Long customerId) {
         return R.ok(bizCustomerService.queryCustomerTopProducts(customerId));
+    }
+
+    /**
+     * 获取客户可带入欠款来源
+     *
+     * @param customerId 客户ID
+     */
+    @SaCheckPermission("system:customer:query")
+    @GetMapping("/{customerId}/debt-records/available")
+    public R<List<BizCustomerDebtRecordVo>> getAvailableDebtRecords(@NotNull(message = "主键不能为空")
+                                                                    @PathVariable Long customerId,
+                                                                    Long targetOrderId) {
+        return R.ok(bizCustomerService.queryAvailableDebtRecords(customerId, targetOrderId));
     }
 
     /**
