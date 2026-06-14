@@ -14,6 +14,7 @@
         <result property="sourceRouteName" column="source_route_name"/>
         <result property="originalAmount" column="original_amount"/>
         <result property="carriedAmount" column="carried_amount"/>
+        <result property="repaidAmount" column="repaid_amount"/>
         <result property="remainingAmount" column="remaining_amount"/>
         <result property="status" column="status"/>
         <result property="remark" column="remark"/>
@@ -29,15 +30,38 @@
                br.route_name as source_route_name,
                r.original_amount,
                r.carried_amount,
-               r.remaining_amount,
+               r.repaid_amount,
+               (r.remaining_amount
+               <if test="targetOrderId != null">
+                   + coalesce(tc.current_carried_amount, 0)
+               </if>
+               ) as remaining_amount,
                r.status,
                r.remark
         from biz_customer_debt_record r
+        <if test="targetOrderId != null">
+        left join (
+            select record_id, sum(amount) as current_carried_amount
+            from biz_customer_debt_carry
+            where target_order_id = #{targetOrderId}
+            group by record_id
+        ) tc on r.record_id = tc.record_id
+        </if>
         left join biz_delivery_order d on r.source_delivery_id = d.delivery_id
         left join biz_route br on d.route_id = br.route_id
         where r.customer_id = #{customerId}
-          and r.remaining_amount > 0
-          and r.status in ('OPEN', 'PENDING')
+          and (
+              r.remaining_amount > 0
+              <if test="targetOrderId != null">
+              or coalesce(tc.current_carried_amount, 0) > 0
+              </if>
+          )
+          and (
+              r.status in ('OPEN', 'PENDING')
+              <if test="targetOrderId != null">
+              or (r.status = 'CARRIED' and coalesce(tc.current_carried_amount, 0) > 0)
+              </if>
+          )
         <if test="targetOrderId != null">
           and (r.source_order_id is null or r.source_order_id != #{targetOrderId})
         </if>

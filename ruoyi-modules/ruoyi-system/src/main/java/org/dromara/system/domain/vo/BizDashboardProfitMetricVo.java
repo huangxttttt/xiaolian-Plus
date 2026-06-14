@@ -5,6 +5,8 @@ import lombok.Data;
 import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 首页盈利概览视图对象
@@ -25,4 +27,6 @@ public class BizDashboardProfitMetricVo implements Serializable {
     private BigDecimal profitAmount = BigDecimal.ZERO;
 
     private BigDecimal profitRate = BigDecimal.ZERO;
+
+    private List<BizDashboardTrendPointVo> trend = new ArrayList<>();
 }

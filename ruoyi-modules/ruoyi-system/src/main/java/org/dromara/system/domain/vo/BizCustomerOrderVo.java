@@ -1,6 +1,7 @@
 package org.dromara.system.domain.vo;
 
 import lombok.Data;
+import org.dromara.system.domain.bo.BizCustomerDebtSourceBo;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -61,6 +62,8 @@ public class BizCustomerOrderVo implements Serializable {
     private BigDecimal unpaidAmount;
 
     private String remark;
+
+    private List<BizCustomerDebtSourceBo> previousDebtSources;
 
     private List<BizCustomerOrderItemVo> items;
 

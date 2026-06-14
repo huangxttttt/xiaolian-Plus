@@ -5,18 +5,26 @@
 <mapper namespace="org.dromara.system.mapper.BizDashboardMapper">
 
     <select id="selectSalesAmount" resultType="java.math.BigDecimal">
-        select coalesce(sum(i.amount), 0)
-        from biz_customer_order_item i
-        inner join biz_customer_order o on i.order_id = o.order_id
+        select coalesce(sum(
+                   case
+                       when d.status = '已归档' then greatest(coalesce(o.receivable_amount, 0) - coalesce(o.previous_debt_amount, 0), 0)
+                       else greatest(coalesce(o.total_amount, 0) - coalesce(o.previous_debt_amount, 0), 0)
+                   end
+               ), 0)
+        from biz_customer_order o
         inner join biz_delivery_order d on o.delivery_id = d.delivery_id
         where d.delivery_date &gt;= #{beginDate}
           and d.delivery_date &lt; #{endDate}
     </select>
 
     <select id="selectSalesAmountByStatus" resultType="java.math.BigDecimal">
-        select coalesce(sum(i.amount), 0)
-        from biz_customer_order_item i
-        inner join biz_customer_order o on i.order_id = o.order_id
+        select coalesce(sum(
+                   case
+                       when d.status = '已归档' then greatest(coalesce(o.receivable_amount, 0) - coalesce(o.previous_debt_amount, 0), 0)
+                       else greatest(coalesce(o.total_amount, 0) - coalesce(o.previous_debt_amount, 0), 0)
+                   end
+               ), 0)
+        from biz_customer_order o
         inner join biz_delivery_order d on o.delivery_id = d.delivery_id
         where d.delivery_date &gt;= #{beginDate}
           and d.delivery_date &lt; #{endDate}
@@ -57,9 +65,13 @@
 
     <select id="selectDailySalesTrend" resultType="org.dromara.system.domain.vo.BizDashboardTrendPointVo">
         select date_format(d.delivery_date, '%m-%d') as label,
-               coalesce(sum(i.amount), 0) as amount
-        from biz_customer_order_item i
-        inner join biz_customer_order o on i.order_id = o.order_id
+               coalesce(sum(
+                   case
+                       when d.status = '已归档' then greatest(coalesce(o.receivable_amount, 0) - coalesce(o.previous_debt_amount, 0), 0)
+                       else greatest(coalesce(o.total_amount, 0) - coalesce(o.previous_debt_amount, 0), 0)
+                   end
+               ), 0) as amount
+        from biz_customer_order o
         inner join biz_delivery_order d on o.delivery_id = d.delivery_id
         where d.delivery_date &gt;= #{beginDate}
           and d.delivery_date &lt; #{endDate}
@@ -69,9 +81,13 @@
 
     <select id="selectMonthlySalesTrend" resultType="org.dromara.system.domain.vo.BizDashboardTrendPointVo">
         select date_format(d.delivery_date, '%Y-%m') as label,
-               coalesce(sum(i.amount), 0) as amount
-        from biz_customer_order_item i
-        inner join biz_customer_order o on i.order_id = o.order_id
+               coalesce(sum(
+                   case
+                       when d.status = '已归档' then greatest(coalesce(o.receivable_amount, 0) - coalesce(o.previous_debt_amount, 0), 0)
+                       else greatest(coalesce(o.total_amount, 0) - coalesce(o.previous_debt_amount, 0), 0)
+                   end
+               ), 0) as amount
+        from biz_customer_order o
         inner join biz_delivery_order d on o.delivery_id = d.delivery_id
         where d.delivery_date &gt;= #{beginDate}
           and d.delivery_date &lt; #{endDate}
@@ -142,6 +158,30 @@
         inner join biz_delivery_order d on o.delivery_id = d.delivery_id
         where d.delivery_date &gt;= #{beginDate}
           and d.delivery_date &lt; #{endDate}
+    </select>
+
+    <select id="selectDailyProfitTrend" resultType="org.dromara.system.domain.vo.BizDashboardTrendPointVo">
+        select date_format(d.delivery_date, '%m-%d') as label,
+               coalesce(sum(i.amount - coalesce(i.cost_price, 0) * i.quantity), 0) as amount
+        from biz_customer_order_item i
+        inner join biz_customer_order o on i.order_id = o.order_id
+        inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+        where d.delivery_date &gt;= #{beginDate}
+          and d.delivery_date &lt; #{endDate}
+        group by d.delivery_date
+        order by d.delivery_date
+    </select>
+
+    <select id="selectMonthlyProfitTrend" resultType="org.dromara.system.domain.vo.BizDashboardTrendPointVo">
+        select date_format(d.delivery_date, '%Y-%m') as label,
+               coalesce(sum(i.amount - coalesce(i.cost_price, 0) * i.quantity), 0) as amount
+        from biz_customer_order_item i
+        inner join biz_customer_order o on i.order_id = o.order_id
+        inner join biz_delivery_order d on o.delivery_id = d.delivery_id
+        where d.delivery_date &gt;= #{beginDate}
+          and d.delivery_date &lt; #{endDate}
+        group by date_format(d.delivery_date, '%Y-%m')
+        order by date_format(d.delivery_date, '%Y-%m')
     </select>
 
     <select id="selectCustomerProfitRanks" resultType="org.dromara.system.domain.vo.BizDashboardProfitRankVo">

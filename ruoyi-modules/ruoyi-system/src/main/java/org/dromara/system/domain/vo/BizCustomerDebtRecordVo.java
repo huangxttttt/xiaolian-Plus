@@ -37,6 +37,8 @@ public class BizCustomerDebtRecordVo implements Serializable {
 
     private BigDecimal carriedAmount;
 
+    private BigDecimal repaidAmount;
+
     private BigDecimal remainingAmount;
 
     private String status;

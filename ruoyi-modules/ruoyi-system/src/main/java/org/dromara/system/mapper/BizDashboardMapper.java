@@ -43,6 +43,10 @@ public interface BizDashboardMapper {
 
     BizDashboardProfitMetricVo selectProfitMetric(@Param("beginDate") LocalDate beginDate, @Param("endDate") LocalDate endDate);
 
+    List<BizDashboardTrendPointVo> selectDailyProfitTrend(@Param("beginDate") LocalDate beginDate, @Param("endDate") LocalDate endDate);
+
+    List<BizDashboardTrendPointVo> selectMonthlyProfitTrend(@Param("beginDate") LocalDate beginDate, @Param("endDate") LocalDate endDate);
+
     List<BizDashboardProfitRankVo> selectCustomerProfitRanks(@Param("beginDate") LocalDate beginDate, @Param("endDate") LocalDate endDate, @Param("totalProfit") BigDecimal totalProfit);
 
     List<BizDashboardProfitRankVo> selectProductProfitRanks(@Param("beginDate") LocalDate beginDate, @Param("endDate") LocalDate endDate, @Param("totalProfit") BigDecimal totalProfit);

@@ -38,6 +38,8 @@ public class BizCustomerDebtRecord extends TenantEntity {
 
     private BigDecimal carriedAmount;
 
+    private BigDecimal repaidAmount;
+
     private BigDecimal remainingAmount;
 
     private String status;
