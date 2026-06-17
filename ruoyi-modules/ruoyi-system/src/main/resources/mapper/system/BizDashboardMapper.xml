@@ -99,13 +99,22 @@
         select c.name as customerName,
                max(r.route_name) as routeName,
                count(distinct o.order_id) as orderCount,
-               coalesce(sum(i.amount), 0) as amount,
+               coalesce(sum(
+                   case
+                       when d.status = '已归档' then greatest(coalesce(o.receivable_amount, 0) - coalesce(o.previous_debt_amount, 0), 0)
+                       else greatest(coalesce(o.total_amount, 0) - coalesce(o.previous_debt_amount, 0), 0)
+                   end
+               ), 0) as amount,
                case
-                   when #{totalAmount} &gt; 0 then round(coalesce(sum(i.amount), 0) / #{totalAmount} * 100, 1)
+                   when #{totalAmount} &gt; 0 then round(coalesce(sum(
+                       case
+                           when d.status = '已归档' then greatest(coalesce(o.receivable_amount, 0) - coalesce(o.previous_debt_amount, 0), 0)
+                           else greatest(coalesce(o.total_amount, 0) - coalesce(o.previous_debt_amount, 0), 0)
+                       end
+                   ), 0) / #{totalAmount} * 100, 1)
                    else 0
                end as percent
-        from biz_customer_order_item i
-        inner join biz_customer_order o on i.order_id = o.order_id
+        from biz_customer_order o
         inner join biz_delivery_order d on o.delivery_id = d.delivery_id
         left join biz_customer c on o.customer_id = c.customer_id
         left join biz_route r on d.route_id = r.route_id

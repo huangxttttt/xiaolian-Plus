@@ -33,7 +33,7 @@ public class BizDashboardServiceImpl implements IBizDashboardService {
     private final BizDashboardMapper dashboardMapper;
 
     @Override
-    public BizDashboardSummaryVo querySummary(String rankPeriod, String rankMonth, String metricMonth, String metricYear) {
+    public BizDashboardSummaryVo querySummary(String rankPeriod, String rankMonth, String rankYear, String metricMonth, String metricYear) {
         LocalDate today = LocalDate.now();
         LocalDate tomorrow = today.plusDays(1);
         LocalDate yesterday = today.minusDays(1);
@@ -44,8 +44,6 @@ public class BizDashboardServiceImpl implements IBizDashboardService {
         LocalDate lastMonthStart = monthStart.minusMonths(1);
         LocalDate monthTrendEnd = selectedMetricMonth.equals(currentMonth) ? tomorrow : nextMonthStart;
         Year currentYear = Year.from(today);
-        LocalDate currentYearStart = currentYear.atDay(1);
-        LocalDate nextCurrentYearStart = currentYear.plusYears(1).atDay(1);
         Year selectedMetricYear = parseMetricYear(metricYear, currentYear);
         LocalDate yearStart = selectedMetricYear.atDay(1);
         LocalDate nextYearStart = yearStart.plusYears(1);
@@ -67,10 +65,13 @@ public class BizDashboardServiceImpl implements IBizDashboardService {
         summary.setYearProfit(yearProfit);
 
         YearMonth selectedRankMonth = parseRankMonth(rankMonth, YearMonth.from(today));
+        Year selectedRankYear = parseMetricYear(rankYear, currentYear);
         LocalDate rankMonthStart = selectedRankMonth.atDay(1);
         LocalDate rankNextMonthStart = selectedRankMonth.plusMonths(1).atDay(1);
-        LocalDate rankBeginDate = "year".equals(rankPeriod) ? currentYearStart : rankMonthStart;
-        LocalDate rankEndDate = "year".equals(rankPeriod) ? nextCurrentYearStart : rankNextMonthStart;
+        LocalDate rankYearStart = selectedRankYear.atDay(1);
+        LocalDate rankNextYearStart = selectedRankYear.plusYears(1).atDay(1);
+        LocalDate rankBeginDate = "year".equals(rankPeriod) ? rankYearStart : rankMonthStart;
+        LocalDate rankEndDate = "year".equals(rankPeriod) ? rankNextYearStart : rankNextMonthStart;
         BigDecimal rankAmount = defaultDecimal(dashboardMapper.selectSalesAmount(rankBeginDate, rankEndDate));
         BigDecimal totalQuantity = defaultDecimal(dashboardMapper.selectProductTotalQuantity(rankBeginDate, rankEndDate));
         BigDecimal totalProfit = defaultDecimal(defaultProfitMetric(dashboardMapper.selectProfitMetric(rankBeginDate, rankEndDate)).getProfitAmount());
