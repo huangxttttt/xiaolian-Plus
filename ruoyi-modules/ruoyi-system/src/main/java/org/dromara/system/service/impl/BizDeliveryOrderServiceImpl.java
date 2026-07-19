@@ -233,6 +233,25 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
             throw new ServiceException("配送货单没有客户订单，不能归档");
         }
 
+        Set<Long> deletedOrderIds = bo.getDeletedOrderIds() == null ? Set.of() : bo.getDeletedOrderIds().stream()
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+        if (!deletedOrderIds.isEmpty()) {
+            Set<Long> existingOrderIds = orders.stream().map(BizCustomerOrder::getOrderId).collect(Collectors.toSet());
+            if (!existingOrderIds.containsAll(deletedOrderIds)) {
+                throw new ServiceException("要删除的客户订单与配送货单不匹配");
+            }
+            orders = orders.stream()
+                .filter(order -> !deletedOrderIds.contains(order.getOrderId()))
+                .toList();
+            if (orders.isEmpty()) {
+                throw new ServiceException("归档时至少保留一个客户订单");
+            }
+            itemMapper.delete(Wrappers.lambdaQuery(BizCustomerOrderItem.class)
+                .in(BizCustomerOrderItem::getOrderId, deletedOrderIds));
+            customerOrderMapper.deleteByIds(deletedOrderIds);
+        }
+
         Map<Long, BizDeliveryArchiveBo.CustomerReceipt> receiptMap = new HashMap<>();
         for (BizDeliveryArchiveBo.CustomerReceipt receipt : bo.getReceipts()) {
             BizDeliveryArchiveBo.CustomerReceipt old = receiptMap.put(receipt.getOrderId(), receipt);
@@ -268,6 +287,10 @@ public class BizDeliveryOrderServiceImpl implements IBizDeliveryOrderService {
         boolean archived = baseMapper.update(null, Wrappers.lambdaUpdate(BizDeliveryOrder.class)
             .eq(BizDeliveryOrder::getDeliveryId, deliveryId)
             .eq(BizDeliveryOrder::getStatus, "未归档")
+            .set(BizDeliveryOrder::getTotalAmount, orders.stream()
+                .map(BizCustomerOrder::getTotalAmount)
+                .map(this::defaultDecimal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add))
             .set(BizDeliveryOrder::getStatus, "已归档")) > 0;
         if (!archived) {
             throw new ServiceException("配送货单状态已变化，请刷新后重试");

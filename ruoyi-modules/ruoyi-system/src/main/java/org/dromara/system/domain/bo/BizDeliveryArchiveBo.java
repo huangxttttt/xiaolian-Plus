@@ -21,6 +21,11 @@ public class BizDeliveryArchiveBo {
     @NotEmpty(message = "客户收款信息不能为空")
     private List<CustomerReceipt> receipts;
 
+    /**
+     * 归档时从本车次删除的客户订单ID。
+     */
+    private List<Long> deletedOrderIds;
+
     @Data
     public static class CustomerReceipt {
 
